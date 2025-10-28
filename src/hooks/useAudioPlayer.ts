@@ -9,10 +9,13 @@ interface UseAudioPlayerProps {
 }
 
 export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }: UseAudioPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audio1Ref = useRef<HTMLAudioElement | null>(null);
+  const audio2Ref = useRef<HTMLAudioElement | null>(null);
   const [currentAudioIndex, setCurrentAudioIndex] = useState<number>(-1);
   const audioUrlsRef = useRef<Map<string, string>>(new Map());
+  
+  // Track which audio element is currently active (true = audio1, false = audio2)
+  const [isAudio1Active, setIsAudio1Active] = useState<boolean>(true);
   
   // Use refs para volume e crossfadeDuration para não reiniciar a música quando mudarem
   const volumeRef = useRef<number>(volume);
@@ -33,15 +36,16 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
 
     const currentBlock = blocks[currentAudioIndex];
     
-    if (currentBlock.type === 'audio' && currentBlock.audioFile && audioRef.current) {
-      const audio = audioRef.current;
+    if (currentBlock.type === 'audio' && currentBlock.audioFile && audio1Ref.current && audio2Ref.current) {
+      // Get current and next audio elements based on which is active
+      const currentAudio = isAudio1Active ? audio1Ref.current : audio2Ref.current;
+      const nextAudio = isAudio1Active ? audio2Ref.current : audio1Ref.current;
       
       // Check if there's currently playing audio (for crossfade)
-      const shouldCrossfade = !audio.paused && audio.src;
+      const shouldCrossfade = !currentAudio.paused && currentAudio.src;
       
-      if (shouldCrossfade && nextAudioRef.current) {
-        // Crossfade implementation
-        const nextAudio = nextAudioRef.current;
+      if (shouldCrossfade) {
+        // Crossfade implementation with preload
         const audioUrl = URL.createObjectURL(currentBlock.audioFile);
         
         // Store URL for cleanup
@@ -49,50 +53,72 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
         
         nextAudio.src = audioUrl;
         nextAudio.volume = 0;
+        nextAudio.preload = 'auto'; // Force preload
         
-        nextAudio.play().catch(e => console.error('Error playing next audio:', e));
-        
-        // Crossfade duration from ref (não reinicia a música quando muda)
-        const fadeDuration = crossfadeDurationRef.current;
-        const fadeSteps = 50;
-        const fadeInterval = fadeDuration / fadeSteps;
-        let step = 0;
-        
-        const crossfadeTimer = setInterval(() => {
-          step++;
-          const progress = step / fadeSteps;
+        // Wait for audio to be fully loaded before starting crossfade
+        const startCrossfade = () => {
+          nextAudio.play().catch(e => console.error('Error playing next audio:', e));
           
-          // Fade out current audio (usa ref para não reiniciar)
-          audio.volume = Math.max(0, volumeRef.current * (1 - progress));
-          // Fade in next audio (usa ref para não reiniciar)
-          nextAudio.volume = Math.min(volumeRef.current, volumeRef.current * progress);
+          // Crossfade duration from ref (não reinicia a música quando muda)
+          const fadeDuration = crossfadeDurationRef.current;
+          const startTime = performance.now();
+          let animationFrameId: number;
           
-          if (step >= fadeSteps) {
-            clearInterval(crossfadeTimer);
+          const performCrossfade = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / fadeDuration, 1);
             
-            // Cleanup old audio URL
-            const oldSrc = audio.src;
-            if (oldSrc && oldSrc.startsWith('blob:')) {
-              URL.revokeObjectURL(oldSrc);
+            // Smooth fade curves
+            // Fade out current audio (usa ref para não reiniciar)
+            currentAudio.volume = Math.max(0, volumeRef.current * (1 - progress));
+            // Fade in next audio (usa ref para não reiniciar)
+            nextAudio.volume = Math.min(volumeRef.current, volumeRef.current * progress);
+            
+            if (progress < 1) {
+              animationFrameId = requestAnimationFrame(performCrossfade);
+            } else {
+              // Crossfade complete - just cleanup old audio
+              // Cleanup old audio URL
+              const oldSrc = currentAudio.src;
+              if (oldSrc && oldSrc.startsWith('blob:')) {
+                URL.revokeObjectURL(oldSrc);
+              }
+              
+              currentAudio.pause();
+              currentAudio.currentTime = 0;
+              currentAudio.src = '';
+              currentAudio.volume = 0;
+              
+              // Switch active audio reference
+              setIsAudio1Active(!isAudio1Active);
+              
+              // nextAudio continues playing - no interruption!
             }
-            
-            audio.pause();
-            audio.currentTime = 0;
-            
-            // Swap references
-            audio.src = nextAudio.src;
-            audio.volume = volumeRef.current; // Usa ref
-            audio.currentTime = nextAudio.currentTime;
-            audio.play().catch(e => console.error('Error playing audio:', e));
-            
-            nextAudio.pause();
-            nextAudio.currentTime = 0;
-            nextAudio.src = '';
-          }
-        }, fadeInterval);
+          };
+          
+          animationFrameId = requestAnimationFrame(performCrossfade);
+          
+          return () => {
+            if (animationFrameId) {
+              cancelAnimationFrame(animationFrameId);
+            }
+          };
+        };
+        
+        // Wait for audio to be ready
+        const handleCanPlayThrough = () => {
+          startCrossfade();
+        };
+        
+        if (nextAudio.readyState >= 4) {
+          // Already loaded
+          startCrossfade();
+        } else {
+          nextAudio.addEventListener('canplaythrough', handleCanPlayThrough, { once: true });
+        }
         
         return () => {
-          clearInterval(crossfadeTimer);
+          nextAudio.removeEventListener('canplaythrough', handleCanPlayThrough);
           // Cleanup on unmount
           if (audioUrl && audioUrl.startsWith('blob:')) {
             URL.revokeObjectURL(audioUrl);
@@ -100,11 +126,11 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
           }
         };
       } else {
-        // No crossfade, just play normally
+        // No crossfade, just play normally on current active audio
         const audioUrl = URL.createObjectURL(currentBlock.audioFile);
         
         // Cleanup old audio URL before setting new one
-        const oldSrc = audio.src;
+        const oldSrc = currentAudio.src;
         if (oldSrc && oldSrc.startsWith('blob:')) {
           URL.revokeObjectURL(oldSrc);
         }
@@ -112,13 +138,24 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
         // Store URL for cleanup
         audioUrlsRef.current.set(currentBlock.id, audioUrl);
         
-        audio.src = audioUrl;
-        audio.volume = volumeRef.current; // Usa ref para não reiniciar
+        currentAudio.src = audioUrl;
+        currentAudio.volume = volumeRef.current; // Usa ref para não reiniciar
+        currentAudio.preload = 'auto'; // Force preload
         
         if (isPlaying) {
-          audio.play().catch(error => {
-            console.error('Error playing audio:', error);
-          });
+          // Wait for audio to be ready before playing
+          const playWhenReady = () => {
+            currentAudio.play().catch(error => {
+              console.error('Error playing audio:', error);
+            });
+          };
+          
+          if (currentAudio.readyState >= 3) {
+            // Already loaded enough to play
+            playWhenReady();
+          } else {
+            currentAudio.addEventListener('canplay', playWhenReady, { once: true });
+          }
         }
         
         // Set up event listener for when audio ends
@@ -132,10 +169,10 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
           }
         };
         
-        audio.addEventListener('ended', handleEnded);
+        currentAudio.addEventListener('ended', handleEnded);
         
         return () => {
-          audio.removeEventListener('ended', handleEnded);
+          currentAudio.removeEventListener('ended', handleEnded);
           // Cleanup audio URL
           if (audioUrl && audioUrl.startsWith('blob:')) {
             URL.revokeObjectURL(audioUrl);
@@ -148,18 +185,18 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
 
   // Separate effect to handle volume changes without restarting audio
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
+    // Update volume on the currently active audio
+    const currentAudio = isAudio1Active ? audio1Ref.current : audio2Ref.current;
+    if (currentAudio && !currentAudio.paused) {
+      currentAudio.volume = volume;
     }
-    if (nextAudioRef.current) {
-      nextAudioRef.current.volume = volume;
-    }
-  }, [volume]);
+  }, [volume, isAudio1Active]);
 
   return {
-    audioRef,
-    nextAudioRef,
+    audioRef: audio1Ref,
+    nextAudioRef: audio2Ref,
     currentAudioIndex,
     setCurrentAudioIndex,
+    isAudio1Active,
   };
 }

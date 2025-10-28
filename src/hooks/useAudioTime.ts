@@ -2,66 +2,74 @@ import { useState, useEffect } from 'react';
 
 interface UseAudioTimeProps {
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  nextAudioRef: React.RefObject<HTMLAudioElement | null>;
+  isAudio1Active: boolean;
   isPlaying: boolean;
 }
 
-export function useAudioTime({ audioRef }: UseAudioTimeProps) {
+export function useAudioTime({ audioRef, nextAudioRef, isAudio1Active }: UseAudioTimeProps) {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [loop, setLoop] = useState<boolean>(true); // Loop ativado por padrão
 
-  // Atualizar tempo atual
+  // Atualizar tempo atual - ouvir ambos os elementos de áudio
   useEffect(() => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !nextAudioRef.current) return;
 
-    const audio = audioRef.current;
+    const audio1 = audioRef.current;
+    const audio2 = nextAudioRef.current;
+    
+    // Determinar qual áudio está ativo
+    const activeAudio = isAudio1Active ? audio1 : audio2;
 
     const updateTime = () => {
-      setCurrentTime(audio.currentTime);
+      setCurrentTime(activeAudio.currentTime);
     };
 
     const updateDuration = () => {
-      setDuration(audio.duration || 0);
+      setDuration(activeAudio.duration || 0);
     };
 
     const handleEnded = () => {
       if (loop) {
-        audio.currentTime = 0;
-        audio.play().catch(e => console.error('Error looping audio:', e));
+        activeAudio.currentTime = 0;
+        activeAudio.play().catch(e => console.error('Error looping audio:', e));
       }
     };
 
-    // Event listeners
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('durationchange', updateDuration);
-    audio.addEventListener('ended', handleEnded);
+    // Event listeners no áudio ativo
+    activeAudio.addEventListener('timeupdate', updateTime);
+    activeAudio.addEventListener('loadedmetadata', updateDuration);
+    activeAudio.addEventListener('durationchange', updateDuration);
+    activeAudio.addEventListener('ended', handleEnded);
 
     // Atualizar duração inicial se já estiver carregada
-    if (audio.duration) {
-      setDuration(audio.duration);
+    if (activeAudio.duration) {
+      setDuration(activeAudio.duration);
     }
 
     return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('durationchange', updateDuration);
-      audio.removeEventListener('ended', handleEnded);
+      activeAudio.removeEventListener('timeupdate', updateTime);
+      activeAudio.removeEventListener('loadedmetadata', updateDuration);
+      activeAudio.removeEventListener('durationchange', updateDuration);
+      activeAudio.removeEventListener('ended', handleEnded);
     };
-  }, [audioRef, loop]);
+  }, [audioRef, nextAudioRef, isAudio1Active, loop]);
 
-  // Atualizar loop no elemento de áudio
+  // Atualizar loop no elemento de áudio ativo
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.loop = loop;
-    }
-  }, [audioRef, loop]);
+    if (!audioRef.current || !nextAudioRef.current) return;
+    
+    const activeAudio = isAudio1Active ? audioRef.current : nextAudioRef.current;
+    activeAudio.loop = loop;
+  }, [audioRef, nextAudioRef, isAudio1Active, loop]);
 
   const seek = (time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
+    if (!audioRef.current || !nextAudioRef.current) return;
+    
+    const activeAudio = isAudio1Active ? audioRef.current : nextAudioRef.current;
+    activeAudio.currentTime = time;
+    setCurrentTime(time);
   };
 
   const toggleLoop = () => {

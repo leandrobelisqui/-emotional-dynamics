@@ -34,6 +34,7 @@ export default function App() {
     nextAudioRef,
     currentAudioIndex,
     setCurrentAudioIndex,
+    isAudio1Active,
   } = useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying });
 
   const {
@@ -42,7 +43,7 @@ export default function App() {
     loop,
     seek,
     toggleLoop,
-  } = useAudioTime({ audioRef, isPlaying });
+  } = useAudioTime({ audioRef, nextAudioRef, isAudio1Active, isPlaying });
 
   const { saveScript: saveScriptFn, loadScriptTauri, loadScriptBrowser } = useScriptManager();
 
