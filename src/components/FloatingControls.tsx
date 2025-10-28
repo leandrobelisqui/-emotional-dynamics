@@ -37,9 +37,9 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
   
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   return (
-    <div className="fixed right-6 top-1/2 transform -translate-y-1/2 bg-white rounded-lg shadow-2xl p-4 border border-gray-200 z-50 w-64">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-        <i className="fas fa-sliders-h mr-2 text-blue-500"></i>
+    <div className="fixed right-6 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-4 border border-gray-200 dark:border-gray-700 z-50 w-64">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+        <i className="fas fa-sliders-h mr-2 text-blue-500 dark:text-blue-400"></i>
         Controles
       </h3>
       
@@ -75,10 +75,10 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
       {/* Time Progress */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-gray-600">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
             {formatTime(currentTime)}
           </span>
-          <span className="text-xs font-medium text-gray-600">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
             {formatTime(duration)}
           </span>
         </div>
@@ -89,12 +89,12 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
           step="0.1"
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
           style={{
             background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${progress}%, #e5e7eb ${progress}%, #e5e7eb 100%)`
           }}
         />
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
           <span>Início</span>
           <span>Fim</span>
         </div>
@@ -103,11 +103,11 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
       {/* Volume Control */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700 flex items-center">
-            <i className="fas fa-volume-up mr-2 text-gray-600"></i>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+            <i className="fas fa-volume-up mr-2 text-gray-600 dark:text-gray-400"></i>
             Volume
           </label>
-          <span className="text-sm font-semibold text-blue-600">
+          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
             {Math.round(volume * 100)}%
           </span>
         </div>
@@ -118,12 +118,12 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
           step="0.01"
           value={volume}
           onChange={onVolumeChange}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
           style={{
             background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${volume * 100}%, #e5e7eb ${volume * 100}%, #e5e7eb 100%)`
           }}
         />
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
           <span>0%</span>
           <span>100%</span>
         </div>
@@ -132,11 +132,11 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
       {/* Crossfade Duration Control */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700 flex items-center">
-            <i className="fas fa-exchange-alt mr-2 text-gray-600"></i>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+            <i className="fas fa-exchange-alt mr-2 text-gray-600 dark:text-gray-400"></i>
             Crossfade
           </label>
-          <span className="text-sm font-semibold text-green-600">
+          <span className="text-sm font-semibold text-green-600 dark:text-green-400">
             {(crossfadeDuration / 1000).toFixed(1)}s
           </span>
         </div>
@@ -147,20 +147,20 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
           step="100"
           value={crossfadeDuration}
           onChange={(e) => onCrossfadeDurationChange(parseInt(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
           style={{
             background: `linear-gradient(to right, #10b981 0%, #10b981 ${((crossfadeDuration - 500) / 4500) * 100}%, #e5e7eb ${((crossfadeDuration - 500) / 4500) * 100}%, #e5e7eb 100%)`
           }}
         />
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
           <span>0.5s</span>
           <span>5.0s</span>
         </div>
       </div>
       
       {/* Info */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500 text-center">
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
           <i className="fas fa-info-circle mr-1"></i>
           Ajuste em tempo real
         </p>

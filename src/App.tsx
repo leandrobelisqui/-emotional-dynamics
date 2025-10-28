@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import EditTab from './components/EditTab';
 import ViewTab from './components/ViewTab';
+import ThemeToggle from './components/ThemeToggle';
 import { useBlockManager } from './hooks/useBlockManager';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { usePlaybackControls } from './hooks/usePlaybackControls';
 import { useScriptManager } from './hooks/useScriptManager';
 import { useAudioTime } from './hooks/useAudioTime';
-import { isTauri, isElectron } from './utils/platform';
+import { useTheme } from './hooks/useTheme';
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [volume, setVolume] = useState<number>(0.8);
   const [activeTab, setActiveTab] = useState<'edit' | 'view'>('edit');
   const [crossfadeDuration, setCrossfadeDuration] = useState<number>(2000);
@@ -83,18 +85,17 @@ export default function App() {
     await saveScriptFn(blocks, volume, crossfadeDuration, audioBasePath);
   };
 
-  const loadScript = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isTauri() || isElectron()) {
-      const data = await loadScriptTauri();
-      if (data) {
-        setBlocks(data.blocks);
-        setVolume(data.volume || 0.8);
-        setCrossfadeDuration(data.crossfadeDuration || 2000);
-        setAudioBasePath(data.audioBasePath || '');
-      }
-      return;
+  const loadScriptNative = async () => {
+    const data = await loadScriptTauri();
+    if (data) {
+      setBlocks(data.blocks);
+      setVolume(data.volume || 0.8);
+      setCrossfadeDuration(data.crossfadeDuration || 2000);
+      setAudioBasePath(data.audioBasePath || '');
     }
-    
+  };
+
+  const loadScript = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -113,27 +114,30 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6 transition-colors">
       <div className="max-w-6xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Dinâmicas de Inteligência Emocional
-          </h1>
-          <p className="text-gray-600">
-            Crie e execute dinâmicas com blocos de texto e áudio
-          </p>
+        <header className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+              Dinâmicas de Inteligência Emocional
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Crie e execute dinâmicas com blocos de texto e áudio
+            </p>
+          </div>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         {/* Tab Navigation */}
         <div className="mb-6">
-          <div className="border-b border-gray-200">
+          <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('edit')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'edit'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <i className="fas fa-edit mr-2"></i>
@@ -143,8 +147,8 @@ export default function App() {
                 onClick={() => setActiveTab('view')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'view'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <i className="fas fa-eye mr-2"></i>
@@ -170,6 +174,7 @@ export default function App() {
                 onAudioBasePathChange={setAudioBasePath}
                 onSaveScript={saveScript}
                 onLoadScript={loadScript}
+                onLoadScriptNative={loadScriptNative}
               />
             </div>
           ) : (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Block } from '../types';
 import BlockList from './BlockList';
+import { isTauri, isElectron } from '../utils/platform';
 
 interface EditTabProps {
   blocks: Block[];
@@ -14,6 +15,7 @@ interface EditTabProps {
   onAudioBasePathChange: (path: string) => void;
   onSaveScript: () => void;
   onLoadScript: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onLoadScriptNative: () => void;
 }
 
 const EditTab: React.FC<EditTabProps> = ({
@@ -28,15 +30,17 @@ const EditTab: React.FC<EditTabProps> = ({
   onAudioBasePathChange,
   onSaveScript,
   onLoadScript,
+  onLoadScriptNative,
 }) => {
+  const isNativePlatform = isTauri() || isElectron();
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
       {/* Audio Base Path Configuration */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg">
         <div className="flex items-start">
           <i className="fas fa-folder text-blue-600 mt-1 mr-3"></i>
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-blue-900 mb-2">
+            <label className="block text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
               📂 Pasta Base dos Arquivos de Áudio
             </label>
             <input
@@ -44,9 +48,9 @@ const EditTab: React.FC<EditTabProps> = ({
               value={audioBasePath}
               onChange={(e) => onAudioBasePathChange(e.target.value)}
               placeholder="Ex: C:\Users\Leandro\Music\Dinamicas"
-              className="w-full px-3 py-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
-            <p className="text-xs text-blue-700 mt-2">
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
               💡 Informe a pasta onde estão seus arquivos de áudio. Isso será salvo no script e facilitará encontrar os arquivos ao carregar.
             </p>
           </div>
@@ -54,7 +58,7 @@ const EditTab: React.FC<EditTabProps> = ({
       </div>
       
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Blocos</h2>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Blocos</h2>
         <div className="flex space-x-2">
           <button
             onClick={() => onAddBlock('text')}
@@ -79,9 +83,9 @@ const EditTab: React.FC<EditTabProps> = ({
         onRemoveBlock={onRemoveBlock}
       />
       
-      <div className="mt-6 pt-4 border-t border-gray-200">
+      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center mb-4">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Volume: {Math.round(volume * 100)}%
           </label>
           <input
@@ -102,15 +106,24 @@ const EditTab: React.FC<EditTabProps> = ({
           >
             <i className="fas fa-save mr-2"></i>Salvar
           </button>
-          <label className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors text-center cursor-pointer">
-            <input
-              type="file"
-              accept=".json"
-              onChange={onLoadScript}
-              className="hidden"
-            />
-            <i className="fas fa-folder-open mr-2"></i>Carregar
-          </label>
+          {isNativePlatform ? (
+            <button
+              onClick={onLoadScriptNative}
+              className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+            >
+              <i className="fas fa-folder-open mr-2"></i>Carregar
+            </button>
+          ) : (
+            <label className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors text-center cursor-pointer">
+              <input
+                type="file"
+                accept=".json"
+                onChange={onLoadScript}
+                className="hidden"
+              />
+              <i className="fas fa-folder-open mr-2"></i>Carregar
+            </label>
+          )}
         </div>
       </div>
     </div>

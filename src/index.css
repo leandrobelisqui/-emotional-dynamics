@@ -4,7 +4,7 @@
 
 /* Custom styles for audio player */
 .audio-player {
-  @apply w-full max-w-2xl mx-auto bg-white rounded-lg overflow-hidden shadow-lg;
+  @apply w-full max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg;
 }
 
 /* Custom scrollbar */
@@ -13,11 +13,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-gray-100 dark:bg-gray-800;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-blue-400 rounded-full;
+  @apply bg-blue-400 dark:bg-blue-600 rounded-full;
 }
 
 /* Animation for block transitions */

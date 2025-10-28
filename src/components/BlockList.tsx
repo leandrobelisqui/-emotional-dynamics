@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Block, BlockListProps } from '../types';
+import { BlockListProps } from '../types';
 import BlockItem from './BlockItem';
 
 const BlockList: React.FC<BlockListProps> = ({
@@ -26,8 +26,8 @@ const BlockList: React.FC<BlockListProps> = ({
 
   if (blocks.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <i className="fas fa-plus-circle text-3xl mb-2 text-blue-400"></i>
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        <i className="fas fa-plus-circle text-3xl mb-2 text-blue-400 dark:text-blue-500"></i>
         <p>Adicione seu primeiro bloco para começar</p>
       </div>
     );

@@ -61,14 +61,14 @@ const ViewTab: React.FC<ViewTabProps> = ({
         onLoopToggle={onLoopToggle}
       />
       
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Visualização</h2>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Visualização</h2>
         </div>
       
-      <div className="min-h-96 max-h-[600px] overflow-y-auto border-2 border-gray-300 rounded-lg p-6 space-y-6">
+      <div className="min-h-96 max-h-[600px] overflow-y-auto border-2 border-gray-300 dark:border-gray-600 rounded-lg p-6 space-y-6">
         {blocks.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
             Adicione blocos na aba de Edição para começar sua dinâmica
           </p>
         ) : (
@@ -77,21 +77,21 @@ const ViewTab: React.FC<ViewTabProps> = ({
               key={block.id}
               className={`p-4 rounded-lg transition-all duration-300 ${
                 index === currentBlockIndex 
-                  ? 'bg-blue-50 border-2 border-blue-400 shadow-md' 
-                  : 'bg-white border border-gray-200'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-500 shadow-md' 
+                  : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
               }`}
             >
               {block.type === 'text' ? (
                 <div>
                   <div className="flex items-center mb-2">
-                    <i className="fas fa-font text-blue-500 mr-2"></i>
-                    <span className="text-sm font-medium text-gray-600">Bloco de Texto</span>
+                    <i className="fas fa-font text-blue-500 dark:text-blue-400 mr-2"></i>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Bloco de Texto</span>
                   </div>
                   <div 
-                    className="prose max-w-none text-gray-800 whitespace-pre-wrap"
+                    className="prose max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap"
                     style={{ fontSize: '1rem', lineHeight: '1.6' }}
                   >
-                    {block.content || <span className="text-gray-400 italic">Texto vazio</span>}
+                    {block.content || <span className="text-gray-400 dark:text-gray-500 italic">Texto vazio</span>}
                   </div>
                 </div>
               ) : (
@@ -103,7 +103,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
                           ? 'text-green-500 animate-pulse' 
                           : 'text-blue-500'
                       }`}></i>
-                      <span className="text-sm font-medium text-gray-600">Bloco de Áudio</span>
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Bloco de Áudio</span>
                     </div>
                     {block.audioFile && (
                       <button
@@ -115,11 +115,11 @@ const ViewTab: React.FC<ViewTabProps> = ({
                       </button>
                     )}
                   </div>
-                  <p className="text-gray-700">
-                    {block.audioFile?.name || <span className="text-gray-400 italic">Nenhum áudio selecionado</span>}
+                  <p className="text-gray-700 dark:text-gray-300">
+                    {block.audioFile?.name || <span className="text-gray-400 dark:text-gray-500 italic">Nenhum áudio selecionado</span>}
                   </p>
                   {block.duration && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       Duração: {Math.floor(block.duration / 60)}:{String(block.duration % 60).padStart(2, '0')}
                     </p>
                   )}
@@ -135,7 +135,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
         <button
           onClick={onPrevious}
           disabled={currentBlockIndex <= 0}
-          className="p-3 text-gray-700 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Anterior"
         >
           <i className="fas fa-step-backward text-2xl"></i>
@@ -143,7 +143,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
         <button
           onClick={onNext}
           disabled={currentBlockIndex >= blocks.length - 1}
-          className="p-3 text-gray-700 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Próximo"
         >
           <i className="fas fa-step-forward text-2xl"></i>

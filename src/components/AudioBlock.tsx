@@ -115,25 +115,25 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
       />
       
       {!block.audioFile && block.audioFilePath && (
-        <div className="bg-yellow-50 border border-yellow-300 rounded-md p-3 mb-3">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-md p-3 mb-3">
           <div className="flex items-start">
             <i className="fas fa-exclamation-triangle text-yellow-600 mt-0.5 mr-2"></i>
             <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800">⚠️ Áudio precisa ser recarregado</p>
+              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">⚠️ Áudio precisa ser recarregado</p>
               {audioBasePath ? (
                 <>
-                  <p className="text-xs text-yellow-700 mt-2 font-semibold">
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2 font-semibold">
                     📂 Procure o arquivo em:
                   </p>
-                  <p className="text-xs text-yellow-900 mt-1 break-all font-mono bg-yellow-100 p-2 rounded">
+                  <p className="text-xs text-yellow-900 dark:text-yellow-100 mt-1 break-all font-mono bg-yellow-100 dark:bg-yellow-900/40 p-2 rounded">
                     {audioBasePath}{audioBasePath.endsWith('\\') ? '' : '\\'}{block.audioFilePath}
                   </p>
-                  <p className="text-xs text-yellow-600 mt-2">
+                  <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-2">
                     💡 Clique em "Recarregar" e navegue até esta pasta
                   </p>
                 </>
               ) : (
-                <p className="text-xs text-yellow-700 mt-1 break-all">
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 break-all">
                   Arquivo: {block.audioFilePath}
                 </p>
               )}
@@ -144,11 +144,11 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
       
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-700">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {block.audioFile ? block.audioFile.name : 'Nenhum arquivo selecionado'}
           </p>
           {block.duration && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Duração: {Math.floor(block.duration / 60)}:{String(block.duration % 60).padStart(2, '0')}
             </p>
           )}
