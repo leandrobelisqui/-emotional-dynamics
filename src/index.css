@@ -77,3 +77,108 @@ input[type="range"].slider::-moz-range-thumb:hover {
   transform: scale(1.2);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
 }
+
+/* Markdown custom styles */
+.markdown-content {
+  line-height: 1.7;
+}
+
+/* Suporte a cores customizadas via HTML no Markdown */
+.markdown-content .text-red {
+  color: #ef4444;
+}
+
+.markdown-content .text-blue {
+  color: #3b82f6;
+}
+
+.markdown-content .text-green {
+  color: #10b981;
+}
+
+.markdown-content .text-yellow {
+  color: #f59e0b;
+}
+
+.markdown-content .text-purple {
+  color: #8b5cf6;
+}
+
+.markdown-content .text-pink {
+  color: #ec4899;
+}
+
+.markdown-content .text-orange {
+  color: #f97316;
+}
+
+/* Dark mode colors */
+.dark .markdown-content .text-red {
+  color: #fca5a5;
+}
+
+.dark .markdown-content .text-blue {
+  color: #93c5fd;
+}
+
+.dark .markdown-content .text-green {
+  color: #6ee7b7;
+}
+
+.dark .markdown-content .text-yellow {
+  color: #fcd34d;
+}
+
+.dark .markdown-content .text-purple {
+  color: #c4b5fd;
+}
+
+.dark .markdown-content .text-pink {
+  color: #f9a8d4;
+}
+
+.dark .markdown-content .text-orange {
+  color: #fdba74;
+}
+
+/* Highlight colors */
+.markdown-content .bg-highlight-red {
+  background-color: #fee2e2;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.markdown-content .bg-highlight-blue {
+  background-color: #dbeafe;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.markdown-content .bg-highlight-green {
+  background-color: #d1fae5;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.markdown-content .bg-highlight-yellow {
+  background-color: #fef3c7;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+/* Dark mode highlights */
+.dark .markdown-content .bg-highlight-red {
+  background-color: #7f1d1d;
+}
+
+.dark .markdown-content .bg-highlight-blue {
+  background-color: #1e3a8a;
+}
+
+.dark .markdown-content .bg-highlight-green {
+  background-color: #064e3b;
+}
+
+.dark .markdown-content .bg-highlight-yellow {
+  background-color: #78350f;
+}

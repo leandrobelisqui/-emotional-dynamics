@@ -1,6 +1,7 @@
 import React from 'react';
 import { Block } from '../types';
 import FloatingControls from './FloatingControls';
+import MarkdownText from './MarkdownText';
 
 interface ViewTabProps {
   blocks: Block[];
@@ -12,15 +13,17 @@ interface ViewTabProps {
   currentTime: number;
   duration: number;
   loop: boolean;
+  fontSize: number;
   onPlayPause: () => void;
   onStop: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
   onPlayBlockAudio: (index: number) => void;
   onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCrossfadeDurationChange: (duration: number) => void;
   onSeek: (time: number) => void;
   onLoopToggle: () => void;
+  onIncreaseFontSize: () => void;
+  onDecreaseFontSize: () => void;
+  onResetFontSize: () => void;
 }
 
 const ViewTab: React.FC<ViewTabProps> = ({
@@ -33,15 +36,17 @@ const ViewTab: React.FC<ViewTabProps> = ({
   currentTime,
   duration,
   loop,
+  fontSize,
   onPlayPause,
   onStop,
-  onPrevious,
-  onNext,
   onPlayBlockAudio,
   onVolumeChange,
   onCrossfadeDurationChange,
   onSeek,
   onLoopToggle,
+  onIncreaseFontSize,
+  onDecreaseFontSize,
+  onResetFontSize,
 }) => {
   return (
     <>
@@ -53,12 +58,16 @@ const ViewTab: React.FC<ViewTabProps> = ({
         currentTime={currentTime}
         duration={duration}
         loop={loop}
+        fontSize={fontSize}
         onVolumeChange={onVolumeChange}
         onCrossfadeDurationChange={onCrossfadeDurationChange}
         onPlayPause={onPlayPause}
         onStop={onStop}
         onSeek={onSeek}
         onLoopToggle={onLoopToggle}
+        onIncreaseFontSize={onIncreaseFontSize}
+        onDecreaseFontSize={onDecreaseFontSize}
+        onResetFontSize={onResetFontSize}
       />
       
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -87,12 +96,11 @@ const ViewTab: React.FC<ViewTabProps> = ({
                     <i className="fas fa-font text-blue-500 dark:text-blue-400 mr-2"></i>
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Bloco de Texto</span>
                   </div>
-                  <div 
-                    className="prose max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap"
-                    style={{ fontSize: '1rem', lineHeight: '1.6' }}
-                  >
-                    {block.content || <span className="text-gray-400 dark:text-gray-500 italic">Texto vazio</span>}
-                  </div>
+                  {block.content ? (
+                    <MarkdownText content={block.content} fontSize={fontSize} />
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-500 italic">Texto vazio</span>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -128,26 +136,6 @@ const ViewTab: React.FC<ViewTabProps> = ({
             </div>
           ))
         )}
-      </div>
-      
-      {/* Navigation Controls */}
-      <div className="flex items-center justify-center space-x-4 mt-6">
-        <button
-          onClick={onPrevious}
-          disabled={currentBlockIndex <= 0}
-          className="p-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          title="Anterior"
-        >
-          <i className="fas fa-step-backward text-2xl"></i>
-        </button>
-        <button
-          onClick={onNext}
-          disabled={currentBlockIndex >= blocks.length - 1}
-          className="p-3 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          title="Próximo"
-        >
-          <i className="fas fa-step-forward text-2xl"></i>
-        </button>
       </div>
     </div>
     </>

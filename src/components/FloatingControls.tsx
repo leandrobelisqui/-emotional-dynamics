@@ -7,12 +7,16 @@ interface FloatingControlsProps {
   currentTime: number;
   duration: number;
   loop: boolean;
+  fontSize: number;
   onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCrossfadeDurationChange: (duration: number) => void;
   onPlayPause: () => void;
   onStop: () => void;
   onSeek: (time: number) => void;
   onLoopToggle: () => void;
+  onIncreaseFontSize: () => void;
+  onDecreaseFontSize: () => void;
+  onResetFontSize: () => void;
 }
 
 const FloatingControls: React.FC<FloatingControlsProps> = ({
@@ -22,12 +26,16 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
   currentTime,
   duration,
   loop,
+  fontSize,
   onVolumeChange,
   onCrossfadeDurationChange,
   onPlayPause,
   onStop,
   onSeek,
   onLoopToggle,
+  onIncreaseFontSize,
+  onDecreaseFontSize,
+  onResetFontSize,
 }) => {
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -155,6 +163,42 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
           <span>0.5s</span>
           <span>5.0s</span>
+        </div>
+      </div>
+      
+      {/* Font Size Control */}
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+            <i className="fas fa-text-height mr-2 text-gray-600 dark:text-gray-400"></i>
+            Fonte
+          </label>
+          <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+            {fontSize}px
+          </span>
+        </div>
+        <div className="flex items-center justify-center space-x-2">
+          <button
+            onClick={onDecreaseFontSize}
+            className="p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors"
+            title="Diminuir fonte"
+          >
+            <i className="fas fa-minus text-sm"></i>
+          </button>
+          <button
+            onClick={onResetFontSize}
+            className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition-colors text-xs"
+            title="Resetar fonte"
+          >
+            Padrão
+          </button>
+          <button
+            onClick={onIncreaseFontSize}
+            className="p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors"
+            title="Aumentar fonte"
+          >
+            <i className="fas fa-plus text-sm"></i>
+          </button>
         </div>
       </div>
       

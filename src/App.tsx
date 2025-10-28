@@ -15,6 +15,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'edit' | 'view'>('edit');
   const [crossfadeDuration, setCrossfadeDuration] = useState<number>(2000);
   const [audioBasePath, setAudioBasePath] = useState<string>('');
+  const [fontSize, setFontSize] = useState<number>(16); // Tamanho da fonte em pixels
 
   const { blocks, setBlocks, addBlock, updateBlock, removeBlock } = useBlockManager();
   
@@ -25,8 +26,6 @@ export default function App() {
     nextAudioRef: playbackNextAudioRef,
     playPause: playPauseControl,
     stop,
-    nextBlock,
-    previousBlock,
     playBlockAudio: playBlockAudioControl,
   } = usePlaybackControls(blocks);
 
@@ -79,6 +78,18 @@ export default function App() {
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
+  };
+
+  const increaseFontSize = () => {
+    setFontSize(prev => Math.min(prev + 2, 32)); // Máximo 32px
+  };
+
+  const decreaseFontSize = () => {
+    setFontSize(prev => Math.max(prev - 2, 12)); // Mínimo 12px
+  };
+
+  const resetFontSize = () => {
+    setFontSize(16); // Tamanho padrão
   };
 
   const saveScript = async () => {
@@ -189,15 +200,17 @@ export default function App() {
                 currentTime={currentTime}
                 duration={duration}
                 loop={loop}
+                fontSize={fontSize}
                 onPlayPause={playPause}
                 onStop={handleStop}
-                onPrevious={previousBlock}
-                onNext={nextBlock}
                 onPlayBlockAudio={playBlockAudio}
                 onVolumeChange={handleVolumeChange}
                 onCrossfadeDurationChange={setCrossfadeDuration}
                 onSeek={seek}
                 onLoopToggle={toggleLoop}
+                onIncreaseFontSize={increaseFontSize}
+                onDecreaseFontSize={decreaseFontSize}
+                onResetFontSize={resetFontSize}
               />
             </div>
           )}
