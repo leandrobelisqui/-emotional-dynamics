@@ -6,17 +6,25 @@ import { AudioBlock } from './AudioBlock';
 interface BlockItemProps {
   block: Block;
   isActive: boolean;
+  isFirst: boolean;
+  isLast: boolean;
   audioBasePath?: string;
   onUpdate: (updates: Partial<Block>) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
 
 const BlockItem: React.FC<BlockItemProps> = ({
   block,
   isActive,
+  isFirst,
+  isLast,
   audioBasePath,
   onUpdate,
   onRemove,
+  onMoveUp,
+  onMoveDown,
 }) => {
 
   const getBlockIcon = () => {
@@ -40,13 +48,34 @@ const BlockItem: React.FC<BlockItemProps> = ({
             {block.type === 'audio' ? 'Bloco de Áudio' : 'Bloco de Texto'}
           </span>
         </div>
-        <button
-          onClick={onRemove}
-          className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 transition-colors"
-          title="Remover bloco"
-        >
-          <i className="fas fa-times"></i>
-        </button>
+        <div className="flex items-center space-x-1">
+          {/* Botão Subir */}
+          <button
+            onClick={onMoveUp}
+            disabled={isFirst}
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Mover para cima"
+          >
+            <i className="fas fa-chevron-up"></i>
+          </button>
+          {/* Botão Descer */}
+          <button
+            onClick={onMoveDown}
+            disabled={isLast}
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Mover para baixo"
+          >
+            <i className="fas fa-chevron-down"></i>
+          </button>
+          {/* Botão Remover */}
+          <button
+            onClick={onRemove}
+            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-1"
+            title="Remover bloco"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
       </div>
 
       <div className="p-4">

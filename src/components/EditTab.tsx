@@ -11,6 +11,8 @@ interface EditTabProps {
   onAddBlock: (type: 'text' | 'audio') => void;
   onUpdateBlock: (id: string, updates: Partial<Block>) => void;
   onRemoveBlock: (id: string) => void;
+  onMoveBlockUp: (id: string) => void;
+  onMoveBlockDown: (id: string) => void;
   onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAudioBasePathChange: (path: string) => void;
   onSaveScript: () => void;
@@ -26,6 +28,8 @@ const EditTab: React.FC<EditTabProps> = ({
   onAddBlock,
   onUpdateBlock,
   onRemoveBlock,
+  onMoveBlockUp,
+  onMoveBlockDown,
   onVolumeChange,
   onAudioBasePathChange,
   onSaveScript,
@@ -81,6 +85,8 @@ const EditTab: React.FC<EditTabProps> = ({
         audioBasePath={audioBasePath}
         onUpdateBlock={onUpdateBlock}
         onRemoveBlock={onRemoveBlock}
+        onMoveBlockUp={onMoveBlockUp}
+        onMoveBlockDown={onMoveBlockDown}
       />
       
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">

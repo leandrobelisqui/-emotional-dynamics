@@ -17,7 +17,7 @@ export default function App() {
   const [audioBasePath, setAudioBasePath] = useState<string>('');
   const [fontSize, setFontSize] = useState<number>(16); // Tamanho da fonte em pixels
 
-  const { blocks, setBlocks, addBlock, updateBlock, removeBlock } = useBlockManager();
+  const { blocks, setBlocks, addBlock, updateBlock, removeBlock, moveBlockUp, moveBlockDown } = useBlockManager();
   
   const {
     currentBlockIndex,
@@ -181,6 +181,8 @@ export default function App() {
                 onAddBlock={addBlock}
                 onUpdateBlock={updateBlock}
                 onRemoveBlock={removeBlock}
+                onMoveBlockUp={moveBlockUp}
+                onMoveBlockDown={moveBlockDown}
                 onVolumeChange={handleVolumeChange}
                 onAudioBasePathChange={setAudioBasePath}
                 onSaveScript={saveScript}

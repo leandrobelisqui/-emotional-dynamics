@@ -15,14 +15,20 @@ export interface BlockListProps {
   audioBasePath?: string;
   onUpdateBlock: (id: string, updates: Partial<Block>) => void;
   onRemoveBlock: (id: string) => void;
+  onMoveBlockUp: (id: string) => void;
+  onMoveBlockDown: (id: string) => void;
 }
 
 export interface BlockItemProps {
   block: Block;
   isActive: boolean;
+  isFirst: boolean;
+  isLast: boolean;
   audioBasePath?: string;
   onUpdate: (updates: Partial<Block>) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
 
 export interface PlayerControlsProps {

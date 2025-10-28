@@ -81,14 +81,28 @@ const ViewTab: React.FC<ViewTabProps> = ({
             Adicione blocos na aba de Edição para começar sua dinâmica
           </p>
         ) : (
-          blocks.map((block, index) => (
+          blocks.map((block, index) => {
+            // Definir cores baseadas no tipo de bloco
+            const getBlockClasses = () => {
+              const isActive = index === currentBlockIndex;
+              
+              if (block.type === 'audio') {
+                // Blocos de áudio com fundo verde
+                return isActive
+                  ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-500 dark:border-green-600 shadow-md'
+                  : 'bg-green-50/50 dark:bg-green-900/10 border border-green-300 dark:border-green-800';
+              } else {
+                // Blocos de texto com fundo azul/branco
+                return isActive
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-500 shadow-md'
+                  : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600';
+              }
+            };
+
+            return (
             <div 
               key={block.id}
-              className={`p-4 rounded-lg transition-all duration-300 ${
-                index === currentBlockIndex 
-                  ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-500 shadow-md' 
-                  : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
-              }`}
+              className={`p-4 rounded-lg transition-all duration-300 ${getBlockClasses()}`}
             >
               {block.type === 'text' ? (
                 <div>
@@ -108,15 +122,15 @@ const ViewTab: React.FC<ViewTabProps> = ({
                     <div className="flex items-center">
                       <i className={`fas fa-music mr-2 ${
                         index === currentAudioIndex && isPlaying 
-                          ? 'text-green-500 animate-pulse' 
-                          : 'text-blue-500'
+                          ? 'text-green-600 dark:text-green-400 animate-pulse' 
+                          : 'text-green-600 dark:text-green-400'
                       }`}></i>
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Bloco de Áudio</span>
+                      <span className="text-sm font-semibold text-green-700 dark:text-green-300">🎵 Bloco de Áudio</span>
                     </div>
                     {block.audioFile && (
                       <button
                         onClick={() => onPlayBlockAudio(index)}
-                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                        className="px-3 py-1 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white text-sm rounded transition-colors shadow-sm"
                       >
                         <i className="fas fa-play mr-1"></i>
                         Tocar
@@ -134,7 +148,8 @@ const ViewTab: React.FC<ViewTabProps> = ({
                 </div>
               )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

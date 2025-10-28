@@ -8,6 +8,8 @@ const BlockList: React.FC<BlockListProps> = ({
   audioBasePath,
   onUpdateBlock,
   onRemoveBlock,
+  onMoveBlockUp,
+  onMoveBlockDown,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -44,9 +46,13 @@ const BlockList: React.FC<BlockListProps> = ({
           <BlockItem
             block={block}
             isActive={currentBlockIndex === index}
+            isFirst={index === 0}
+            isLast={index === blocks.length - 1}
             audioBasePath={audioBasePath}
             onUpdate={(updates) => onUpdateBlock(block.id, updates)}
             onRemove={() => onRemoveBlock(block.id)}
+            onMoveUp={() => onMoveBlockUp(block.id)}
+            onMoveDown={() => onMoveBlockDown(block.id)}
           />
         </div>
       ))}
