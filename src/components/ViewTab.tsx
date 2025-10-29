@@ -14,6 +14,7 @@ interface ViewTabProps {
   duration: number;
   loop: boolean;
   fontSize: number;
+  trimSilence: boolean;
   onPlayPause: () => void;
   onStop: () => void;
   onPlayBlockAudio: (index: number) => void;
@@ -21,6 +22,7 @@ interface ViewTabProps {
   onCrossfadeDurationChange: (duration: number) => void;
   onSeek: (time: number) => void;
   onLoopToggle: () => void;
+  onTrimSilenceToggle: () => void;
   onIncreaseFontSize: () => void;
   onDecreaseFontSize: () => void;
   onResetFontSize: () => void;
@@ -37,6 +39,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
   duration,
   loop,
   fontSize,
+  trimSilence,
   onPlayPause,
   onStop,
   onPlayBlockAudio,
@@ -44,6 +47,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
   onCrossfadeDurationChange,
   onSeek,
   onLoopToggle,
+  onTrimSilenceToggle,
   onIncreaseFontSize,
   onDecreaseFontSize,
   onResetFontSize,
@@ -59,12 +63,14 @@ const ViewTab: React.FC<ViewTabProps> = ({
         duration={duration}
         loop={loop}
         fontSize={fontSize}
+        trimSilence={trimSilence}
         onVolumeChange={onVolumeChange}
         onCrossfadeDurationChange={onCrossfadeDurationChange}
         onPlayPause={onPlayPause}
         onStop={onStop}
         onSeek={onSeek}
         onLoopToggle={onLoopToggle}
+        onTrimSilenceToggle={onTrimSilenceToggle}
         onIncreaseFontSize={onIncreaseFontSize}
         onDecreaseFontSize={onDecreaseFontSize}
         onResetFontSize={onResetFontSize}

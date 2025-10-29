@@ -8,12 +8,14 @@ interface FloatingControlsProps {
   duration: number;
   loop: boolean;
   fontSize: number;
+  trimSilence: boolean;
   onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCrossfadeDurationChange: (duration: number) => void;
   onPlayPause: () => void;
   onStop: () => void;
   onSeek: (time: number) => void;
   onLoopToggle: () => void;
+  onTrimSilenceToggle: () => void;
   onIncreaseFontSize: () => void;
   onDecreaseFontSize: () => void;
   onResetFontSize: () => void;
@@ -27,12 +29,14 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
   duration,
   loop,
   fontSize,
+  trimSilence,
   onVolumeChange,
   onCrossfadeDurationChange,
   onPlayPause,
   onStop,
   onSeek,
   onLoopToggle,
+  onTrimSilenceToggle,
   onIncreaseFontSize,
   onDecreaseFontSize,
   onResetFontSize,
@@ -72,12 +76,37 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
           className={`p-3 rounded-full transition-colors shadow-lg ${
             loop 
               ? 'bg-purple-500 hover:bg-purple-600 text-white' 
-              : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300'
           }`}
           title={loop ? 'Loop Ativado' : 'Loop Desativado'}
         >
           <i className="fas fa-redo text-lg"></i>
         </button>
+      </div>
+      
+      {/* Trim Silence Toggle */}
+      <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={onTrimSilenceToggle}
+          className={`w-full p-3 rounded-lg transition-colors shadow-md flex items-center justify-between ${
+            trimSilence
+              ? 'bg-orange-500 hover:bg-orange-600 text-white'
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300'
+          }`}
+          title={trimSilence ? 'Remover Silêncio Ativado' : 'Remover Silêncio Desativado'}
+        >
+          <span className="flex items-center">
+            <i className="fas fa-cut mr-2"></i>
+            <span className="text-sm font-medium">Remover Silêncio</span>
+          </span>
+          <i className={`fas ${trimSilence ? 'fa-toggle-on' : 'fa-toggle-off'} text-xl`}></i>
+        </button>
+        {trimSilence && (
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">
+            <i className="fas fa-info-circle mr-1"></i>
+            Remove silêncio no início e fim dos áudios
+          </p>
+        )}
       </div>
       
       {/* Time Progress */}

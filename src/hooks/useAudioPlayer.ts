@@ -1,21 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { Block } from '../types';
+import { useAudioAnalyzer } from './useAudioAnalyzer';
 
 interface UseAudioPlayerProps {
   blocks: Block[];
   volume: number;
   crossfadeDuration: number;
   isPlaying: boolean;
+  trimSilence: boolean;
+  loop: boolean;
 }
 
-export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }: UseAudioPlayerProps) {
+export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, trimSilence, loop }: UseAudioPlayerProps) {
   const audio1Ref = useRef<HTMLAudioElement | null>(null);
   const audio2Ref = useRef<HTMLAudioElement | null>(null);
   const [currentAudioIndex, setCurrentAudioIndex] = useState<number>(-1);
   const audioUrlsRef = useRef<Map<string, string>>(new Map());
+  const { detectSilence } = useAudioAnalyzer();
   
   // Track which audio element is currently active (true = audio1, false = audio2)
   const [isAudio1Active, setIsAudio1Active] = useState<boolean>(true);
+  
+  // Cache de tempos de trim para cada arquivo de áudio
+  const trimTimesRef = useRef<Map<string, { startTime: number; endTime: number }>>(new Map());
   
   // Use refs para volume e crossfadeDuration para não reiniciar a música quando mudarem
   const volumeRef = useRef<number>(volume);
@@ -55,8 +62,38 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
         nextAudio.volume = 0;
         nextAudio.preload = 'auto'; // Force preload
         
+        // Detectar silêncio se ativado
+        const setupAudioTrim = async (): Promise<void> => {
+          if (trimSilence && currentBlock.audioFile && !trimTimesRef.current.has(currentBlock.id)) {
+            try {
+              console.log('🔍 Analisando silêncio para:', currentBlock.audioFile.name);
+              const trimData = await detectSilence(currentBlock.audioFile);
+              trimTimesRef.current.set(currentBlock.id, {
+                startTime: trimData.startTime,
+                endTime: trimData.endTime,
+              });
+              console.log('✅ Trim salvo no cache:', currentBlock.id, trimData);
+            } catch (error) {
+              console.error('❌ Erro ao detectar silêncio:', error);
+            }
+          } else if (trimSilence && trimTimesRef.current.has(currentBlock.id)) {
+            console.log('💾 Usando trim do cache:', currentBlock.id, trimTimesRef.current.get(currentBlock.id));
+          }
+          // Sempre retornar Promise resolvida
+          return Promise.resolve();
+        };
+        
         // Wait for audio to be fully loaded before starting crossfade
-        const startCrossfade = () => {
+        const startCrossfade = async () => {
+          // Aplicar trim se disponível
+          if (trimSilence && trimTimesRef.current.has(currentBlock.id)) {
+            const trimData = trimTimesRef.current.get(currentBlock.id)!;
+            nextAudio.currentTime = trimData.startTime;
+            console.log('✂️ Aplicando trim no crossfade - startTime:', trimData.startTime.toFixed(2) + 's');
+          } else if (trimSilence) {
+            console.warn('⚠️ Trim ativado mas dados não disponíveis no cache para:', currentBlock.id);
+          }
+          
           nextAudio.play().catch(e => console.error('Error playing next audio:', e));
           
           // Crossfade duration from ref (não reinicia a música quando muda)
@@ -92,6 +129,8 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
               // Switch active audio reference
               setIsAudio1Active(!isAudio1Active);
               
+              // O monitoramento de endTime será feito pelo useAudioTime
+              
               // nextAudio continues playing - no interruption!
             }
           };
@@ -105,14 +144,18 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
           };
         };
         
-        // Wait for audio to be ready
-        const handleCanPlayThrough = () => {
+        // Wait for audio to be ready AND trim analysis to complete
+        const handleCanPlayThrough = async () => {
+          // Garantir que análise de silêncio terminou
+          await setupAudioTrim();
           startCrossfade();
         };
         
         if (nextAudio.readyState >= 4) {
-          // Already loaded
-          startCrossfade();
+          // Already loaded - wait for trim analysis then start
+          setupAudioTrim().then(() => {
+            startCrossfade();
+          });
         } else {
           nextAudio.addEventListener('canplaythrough', handleCanPlayThrough, { once: true });
         }
@@ -142,9 +185,40 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
         currentAudio.volume = volumeRef.current; // Usa ref para não reiniciar
         currentAudio.preload = 'auto'; // Force preload
         
+        // Detectar silêncio se ativado
+        const setupAudioTrim = async (): Promise<void> => {
+          if (trimSilence && currentBlock.audioFile && !trimTimesRef.current.has(currentBlock.id)) {
+            try {
+              const trimData = await detectSilence(currentBlock.audioFile);
+              trimTimesRef.current.set(currentBlock.id, {
+                startTime: trimData.startTime,
+                endTime: trimData.endTime,
+              });
+              // Aplicar trim imediatamente se já carregado
+              if (currentAudio.readyState >= 3) {
+                currentAudio.currentTime = trimData.startTime;
+              }
+            } catch (error) {
+              console.error('Erro ao detectar silêncio:', error);
+            }
+          }
+          // Sempre retornar Promise resolvida
+          return Promise.resolve();
+        };
+        
         if (isPlaying) {
-          // Wait for audio to be ready before playing
-          const playWhenReady = () => {
+          // Wait for audio to be ready AND trim analysis before playing
+          const playWhenReady = async () => {
+            // Garantir que análise de silêncio terminou
+            await setupAudioTrim();
+            
+            // Aplicar trim se disponível
+            if (trimSilence && trimTimesRef.current.has(currentBlock.id)) {
+              const trimData = trimTimesRef.current.get(currentBlock.id)!;
+              currentAudio.currentTime = trimData.startTime;
+              console.log('✂️ Aplicando trim no play - startTime:', trimData.startTime.toFixed(2) + 's');
+            }
+            
             currentAudio.play().catch(error => {
               console.error('Error playing audio:', error);
             });
@@ -156,16 +230,32 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
           } else {
             currentAudio.addEventListener('canplay', playWhenReady, { once: true });
           }
+        } else {
+          // Mesmo sem tocar, detectar silêncio para cache
+          setupAudioTrim();
         }
+        
+        // O monitoramento de endTime será feito pelo useAudioTime
+        let timeUpdateInterval: number | null = null;
         
         // Set up event listener for when audio ends
         const handleEnded = () => {
+          // Se loop estiver ativado, não avançar para próximo áudio
+          // (useAudioTime já controla o loop)
+          if (loop) {
+            console.log('🔁 Loop ativado - não avançando para próximo áudio');
+            return;
+          }
+          
           // Find next audio block
           const nextAudioIndex = blocks.findIndex((b, idx) => 
             idx > currentAudioIndex && b.type === 'audio'
           );
           if (nextAudioIndex !== -1) {
+            console.log('➡️ Avançando para próximo áudio');
             setCurrentAudioIndex(nextAudioIndex);
+          } else {
+            console.log('⏹️ Fim da lista de áudios');
           }
         };
         
@@ -173,6 +263,9 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
         
         return () => {
           currentAudio.removeEventListener('ended', handleEnded);
+          if (timeUpdateInterval) {
+            clearInterval(timeUpdateInterval);
+          }
           // Cleanup audio URL
           if (audioUrl && audioUrl.startsWith('blob:')) {
             URL.revokeObjectURL(audioUrl);
@@ -198,5 +291,6 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying }:
     currentAudioIndex,
     setCurrentAudioIndex,
     isAudio1Active,
+    trimTimesRef,
   };
 }

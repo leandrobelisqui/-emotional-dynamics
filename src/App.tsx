@@ -16,6 +16,8 @@ export default function App() {
   const [crossfadeDuration, setCrossfadeDuration] = useState<number>(2000);
   const [audioBasePath, setAudioBasePath] = useState<string>('');
   const [fontSize, setFontSize] = useState<number>(16); // Tamanho da fonte em pixels
+  const [trimSilence, setTrimSilence] = useState<boolean>(false); // Remover silêncio no início/fim
+  const [loop, setLoop] = useState<boolean>(true); // Loop ativado por padrão
 
   const { blocks, setBlocks, addBlock, updateBlock, removeBlock, moveBlockUp, moveBlockDown } = useBlockManager();
   
@@ -35,15 +37,25 @@ export default function App() {
     currentAudioIndex,
     setCurrentAudioIndex,
     isAudio1Active,
-  } = useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying });
+    trimTimesRef,
+  } = useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, trimSilence, loop });
 
+  const currentBlock = currentAudioIndex >= 0 ? blocks[currentAudioIndex] : null;
+  
   const {
     currentTime,
     duration,
-    loop,
     seek,
-    toggleLoop,
-  } = useAudioTime({ audioRef, nextAudioRef, isAudio1Active, isPlaying });
+  } = useAudioTime({ 
+    audioRef, 
+    nextAudioRef, 
+    isAudio1Active, 
+    isPlaying,
+    trimSilence,
+    trimTimes: trimTimesRef?.current,
+    currentBlockId: currentBlock?.id,
+    loop,
+  });
 
   const { saveScript: saveScriptFn, loadScriptTauri, loadScriptBrowser } = useScriptManager();
 
@@ -91,6 +103,14 @@ export default function App() {
 
   const resetFontSize = () => {
     setFontSize(16); // Tamanho padrão
+  };
+
+  const toggleTrimSilence = () => {
+    setTrimSilence(prev => !prev);
+  };
+
+  const toggleLoop = () => {
+    setLoop(prev => !prev);
   };
 
   const saveScript = async () => {
@@ -204,6 +224,7 @@ export default function App() {
                 duration={duration}
                 loop={loop}
                 fontSize={fontSize}
+                trimSilence={trimSilence}
                 onPlayPause={playPause}
                 onStop={handleStop}
                 onPlayBlockAudio={playBlockAudio}
@@ -211,6 +232,7 @@ export default function App() {
                 onCrossfadeDurationChange={setCrossfadeDuration}
                 onSeek={seek}
                 onLoopToggle={toggleLoop}
+                onTrimSilenceToggle={toggleTrimSilence}
                 onIncreaseFontSize={increaseFontSize}
                 onDecreaseFontSize={decreaseFontSize}
                 onResetFontSize={resetFontSize}

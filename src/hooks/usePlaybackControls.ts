@@ -54,7 +54,13 @@ export function usePlaybackControls(blocks: Block[]) {
   const playBlockAudio = (blockIndex: number, setCurrentAudioIndex: (index: number) => void) => {
     const block = blocks[blockIndex];
     if (block.type === 'audio' && block.audioFile) {
+      // Definir o índice do áudio
       setCurrentAudioIndex(blockIndex);
+      // Definir o bloco atual
+      setCurrentBlockIndex(blockIndex);
+      // Iniciar reprodução
+      setIsPlaying(true);
+      console.log('▶️ Iniciando reprodução do áudio:', block.audioFile.name, 'no índice:', blockIndex);
     }
   };
 
