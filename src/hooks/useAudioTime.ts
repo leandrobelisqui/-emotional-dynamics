@@ -47,11 +47,12 @@ export function useAudioTime({
         
         // Iniciar fade-out quando chegar perto do endTime
         if (activeAudio.currentTime >= fadeStartTime && activeAudio.currentTime < trimData.endTime && !activeAudio.paused) {
-          const fadeProgress = (activeAudio.currentTime - fadeStartTime) / (LOOP_FADE_DURATION / 1000);
+          const fadeProgress = Math.min(Math.max((activeAudio.currentTime - fadeStartTime) / (LOOP_FADE_DURATION / 1000), 0), 1);
           const originalVolume = activeAudio.dataset.originalVolume ? parseFloat(activeAudio.dataset.originalVolume) : activeAudio.volume;
           
-          // Aplicar fade-out
-          activeAudio.volume = originalVolume * (1 - fadeProgress);
+          // Aplicar fade-out com proteção de range [0, 1]
+          const fadeOutVolume = originalVolume * (1 - fadeProgress);
+          activeAudio.volume = Math.max(0, Math.min(1, fadeOutVolume));
         }
         
         // Fazer loop quando chegar ao endTime
@@ -80,14 +81,17 @@ export function useAudioTime({
             
             const performFadeIn = (currentTime: number) => {
               const elapsed = currentTime - startTime;
-              const progress = Math.min(elapsed / LOOP_FADE_DURATION, 1);
+              const progress = Math.min(Math.max(elapsed / LOOP_FADE_DURATION, 0), 1);
               
-              activeAudio.volume = originalVolume * progress;
+              // Aplicar fade-in com proteção de range [0, 1]
+              const fadeInVolume = originalVolume * progress;
+              activeAudio.volume = Math.max(0, Math.min(1, fadeInVolume));
               
               if (progress < 1 && !activeAudio.paused) {
                 fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
               } else {
-                activeAudio.volume = originalVolume; // Garantir volume final
+                // Garantir volume final no range correto
+                activeAudio.volume = Math.max(0, Math.min(1, originalVolume));
                 fadeAnimationRef.current = null;
               }
             };

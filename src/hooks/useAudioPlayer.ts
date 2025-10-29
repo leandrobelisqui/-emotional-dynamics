@@ -85,6 +85,13 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
         
         // Wait for audio to be fully loaded before starting crossfade
         const startCrossfade = async () => {
+          // Garantir que o volume do currentAudio está correto antes do crossfade
+          // (pode ter sido modificado pelo fade do loop)
+          if (currentAudio.volume < volumeRef.current * 0.9) {
+            console.log('🔊 Restaurando volume antes do crossfade:', volumeRef.current);
+            currentAudio.volume = volumeRef.current;
+          }
+          
           // Aplicar trim se disponível
           if (trimSilence && trimTimesRef.current.has(currentBlock.id)) {
             const trimData = trimTimesRef.current.get(currentBlock.id)!;
@@ -103,13 +110,16 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
           
           const performCrossfade = (currentTime: number) => {
             const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / fadeDuration, 1);
+            const progress = Math.min(Math.max(elapsed / fadeDuration, 0), 1);
             
             // Smooth fade curves
             // Fade out current audio (usa ref para não reiniciar)
-            currentAudio.volume = Math.max(0, volumeRef.current * (1 - progress));
+            const fadeOutVolume = volumeRef.current * (1 - progress);
+            currentAudio.volume = Math.max(0, Math.min(1, fadeOutVolume));
+            
             // Fade in next audio (usa ref para não reiniciar)
-            nextAudio.volume = Math.min(volumeRef.current, volumeRef.current * progress);
+            const fadeInVolume = volumeRef.current * progress;
+            nextAudio.volume = Math.max(0, Math.min(1, fadeInVolume));
             
             if (progress < 1) {
               animationFrameId = requestAnimationFrame(performCrossfade);
