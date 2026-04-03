@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import EditTab from './components/EditTab';
 import ViewTab from './components/ViewTab';
 import ThemeToggle from './components/ThemeToggle';
@@ -8,6 +9,7 @@ import { usePlaybackControls } from './hooks/usePlaybackControls';
 import { useScriptManager } from './hooks/useScriptManager';
 import { useAudioTime } from './hooks/useAudioTime';
 import { useTheme } from './hooks/useTheme';
+import { LoadedScript, Block } from './types';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -15,12 +17,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'edit' | 'view'>('edit');
   const [crossfadeDuration, setCrossfadeDuration] = useState<number>(2000);
   const [audioBasePath, setAudioBasePath] = useState<string>('');
-  const [fontSize, setFontSize] = useState<number>(16); // Tamanho da fonte em pixels
-  const [trimSilence, setTrimSilence] = useState<boolean>(false); // Remover silêncio no início/fim
-  const [loop, setLoop] = useState<boolean>(true); // Loop ativado por padrão
+  const [fontSize, setFontSize] = useState<number>(16);
+  const [trimSilence, setTrimSilence] = useState<boolean>(false);
+  const [loop, setLoop] = useState<boolean>(true);
+  const [loadedScripts, setLoadedScripts] = useState<LoadedScript[]>([]);
 
   const { blocks, setBlocks, addBlock, updateBlock, removeBlock, moveBlockUp, moveBlockDown } = useBlockManager();
-  
+
   const {
     currentBlockIndex,
     isPlaying,
@@ -38,23 +41,25 @@ export default function App() {
     setCurrentAudioIndex,
     isAudio1Active,
     trimTimesRef,
+    volumeRef,
   } = useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, trimSilence, loop });
 
   const currentBlock = currentAudioIndex >= 0 ? blocks[currentAudioIndex] : null;
-  
+
   const {
     currentTime,
     duration,
     seek,
-  } = useAudioTime({ 
-    audioRef, 
-    nextAudioRef, 
-    isAudio1Active, 
+  } = useAudioTime({
+    audioRef,
+    nextAudioRef,
+    isAudio1Active,
     isPlaying,
     trimSilence,
     trimTimes: trimTimesRef?.current,
     currentBlockId: currentBlock?.id,
     loop,
+    volumeRef,
   });
 
   const { saveScript: saveScriptFn, loadScriptTauri, loadScriptBrowser } = useScriptManager();
@@ -67,9 +72,8 @@ export default function App() {
 
   const playPause = () => playPauseControl(currentAudioIndex, setCurrentAudioIndex);
   const playBlockAudio = (blockIndex: number) => playBlockAudioControl(blockIndex, setCurrentAudioIndex);
-  
+
   const handleStop = () => {
-    // Para os áudios reais do useAudioPlayer
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -80,11 +84,7 @@ export default function App() {
       nextAudioRef.current.currentTime = 0;
       nextAudioRef.current.src = '';
     }
-    
-    // Chama o stop do usePlaybackControls para resetar estados
     stop();
-    
-    // Reseta o índice de áudio
     setCurrentAudioIndex(-1);
   };
 
@@ -94,15 +94,15 @@ export default function App() {
   };
 
   const increaseFontSize = () => {
-    setFontSize(prev => Math.min(prev + 2, 32)); // Máximo 32px
+    setFontSize(prev => Math.min(prev + 2, 32));
   };
 
   const decreaseFontSize = () => {
-    setFontSize(prev => Math.max(prev - 2, 12)); // Mínimo 12px
+    setFontSize(prev => Math.max(prev - 2, 12));
   };
 
   const resetFontSize = () => {
-    setFontSize(16); // Tamanho padrão
+    setFontSize(16);
   };
 
   const toggleTrimSilence = () => {
@@ -117,13 +117,34 @@ export default function App() {
     await saveScriptFn(blocks, volume, crossfadeDuration, audioBasePath);
   };
 
+  // Helper: tag blocks with script metadata and append to existing blocks
+  const appendScript = (scriptBlocks: Block[], fileName: string, settings?: { volume?: number; crossfadeDuration?: number; audioBasePath?: string }) => {
+    const scriptId = uuidv4();
+    const taggedBlocks = scriptBlocks.map(block => ({
+      ...block,
+      scriptId,
+      scriptName: fileName,
+    }));
+
+    setBlocks(prev => [...prev, ...taggedBlocks]);
+    setLoadedScripts(prev => [...prev, { id: scriptId, name: fileName, blockCount: taggedBlocks.length }]);
+
+    // Apply settings from the first loaded script only
+    if (loadedScripts.length === 0 && settings) {
+      if (settings.volume !== undefined) setVolume(settings.volume);
+      if (settings.crossfadeDuration !== undefined) setCrossfadeDuration(settings.crossfadeDuration);
+      if (settings.audioBasePath !== undefined) setAudioBasePath(settings.audioBasePath);
+    }
+  };
+
   const loadScriptNative = async () => {
-    const data = await loadScriptTauri();
-    if (data) {
-      setBlocks(data.blocks);
-      setVolume(data.volume || 0.8);
-      setCrossfadeDuration(data.crossfadeDuration || 2000);
-      setAudioBasePath(data.audioBasePath || '');
+    const result = await loadScriptTauri();
+    if (result) {
+      appendScript(result.data.blocks, result.fileName, {
+        volume: result.data.volume,
+        crossfadeDuration: result.data.crossfadeDuration,
+        audioBasePath: result.data.audioBasePath,
+      });
     }
   };
 
@@ -133,17 +154,84 @@ export default function App() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const data = loadScriptBrowser(event.target?.result as string);
-      if (data) {
-        setBlocks(data.blocks);
-        setVolume(data.volume || 0.8);
-        setCrossfadeDuration(data.crossfadeDuration || 2000);
-        setAudioBasePath(data.audioBasePath || '');
+      const result = loadScriptBrowser(event.target?.result as string, file.name);
+      if (result) {
+        appendScript(result.data.blocks, result.fileName, {
+          volume: result.data.volume,
+          crossfadeDuration: result.data.crossfadeDuration,
+          audioBasePath: result.data.audioBasePath,
+        });
       }
     };
     reader.readAsText(file);
+
+    // Reset file input so same file can be loaded again
+    e.target.value = '';
   };
 
+  // Script list management
+  const removeScript = (scriptId: string) => {
+    setBlocks(prev => prev.filter(b => b.scriptId !== scriptId));
+    setLoadedScripts(prev => prev.filter(s => s.id !== scriptId));
+  };
+
+  const clearAllScripts = () => {
+    handleStop();
+    setBlocks([]);
+    setLoadedScripts([]);
+  };
+
+  const moveScriptUp = (scriptId: string) => {
+    const index = loadedScripts.findIndex(s => s.id === scriptId);
+    if (index <= 0) return;
+
+    // Reorder loadedScripts
+    const newScripts = [...loadedScripts];
+    [newScripts[index - 1], newScripts[index]] = [newScripts[index], newScripts[index - 1]];
+    setLoadedScripts(newScripts);
+
+    // Rebuild blocks array in new script order
+    rebuildBlocksFromScriptOrder(newScripts);
+  };
+
+  const moveScriptDown = (scriptId: string) => {
+    const index = loadedScripts.findIndex(s => s.id === scriptId);
+    if (index < 0 || index >= loadedScripts.length - 1) return;
+
+    const newScripts = [...loadedScripts];
+    [newScripts[index], newScripts[index + 1]] = [newScripts[index + 1], newScripts[index]];
+    setLoadedScripts(newScripts);
+
+    rebuildBlocksFromScriptOrder(newScripts);
+  };
+
+  const rebuildBlocksFromScriptOrder = (orderedScripts: LoadedScript[]) => {
+    setBlocks(prev => {
+      const blocksByScript = new Map<string, Block[]>();
+      // Also collect blocks without scriptId (manually added blocks)
+      const untaggedBlocks: Block[] = [];
+
+      for (const block of prev) {
+        if (block.scriptId) {
+          const list = blocksByScript.get(block.scriptId) || [];
+          list.push(block);
+          blocksByScript.set(block.scriptId, list);
+        } else {
+          untaggedBlocks.push(block);
+        }
+      }
+
+      const reordered: Block[] = [];
+      for (const script of orderedScripts) {
+        const scriptBlocks = blocksByScript.get(script.id) || [];
+        reordered.push(...scriptBlocks);
+      }
+      // Append untagged blocks at the end
+      reordered.push(...untaggedBlocks);
+
+      return reordered;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6 transition-colors">
@@ -199,6 +287,7 @@ export default function App() {
                 currentBlockIndex={currentBlockIndex}
                 volume={volume}
                 audioBasePath={audioBasePath}
+                loadedScripts={loadedScripts}
                 onAddBlock={addBlock}
                 onUpdateBlock={updateBlock}
                 onRemoveBlock={removeBlock}
@@ -209,6 +298,10 @@ export default function App() {
                 onSaveScript={saveScript}
                 onLoadScript={loadScript}
                 onLoadScriptNative={loadScriptNative}
+                onRemoveScript={removeScript}
+                onMoveScriptUp={moveScriptUp}
+                onMoveScriptDown={moveScriptDown}
+                onClearAllScripts={clearAllScripts}
               />
             </div>
           ) : (
@@ -225,6 +318,7 @@ export default function App() {
                 loop={loop}
                 fontSize={fontSize}
                 trimSilence={trimSilence}
+                loadedScripts={loadedScripts}
                 onPlayPause={playPause}
                 onStop={handleStop}
                 onPlayBlockAudio={playBlockAudio}

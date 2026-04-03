@@ -9,16 +9,18 @@ interface UseAudioTimeProps {
   trimTimes?: Map<string, { startTime: number; endTime: number }>;
   currentBlockId?: string;
   loop: boolean;
+  volumeRef: React.RefObject<number>;
 }
 
-export function useAudioTime({ 
-  audioRef, 
-  nextAudioRef, 
-  isAudio1Active, 
+export function useAudioTime({
+  audioRef,
+  nextAudioRef,
+  isAudio1Active,
   trimSilence = false,
   trimTimes,
   currentBlockId,
-  loop 
+  loop,
+  volumeRef,
 }: UseAudioTimeProps) {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -48,64 +50,54 @@ export function useAudioTime({
         // Iniciar fade-out quando chegar perto do endTime
         if (activeAudio.currentTime >= fadeStartTime && activeAudio.currentTime < trimData.endTime && !activeAudio.paused) {
           const fadeProgress = Math.min(Math.max((activeAudio.currentTime - fadeStartTime) / (LOOP_FADE_DURATION / 1000), 0), 1);
-          const originalVolume = activeAudio.dataset.originalVolume ? parseFloat(activeAudio.dataset.originalVolume) : activeAudio.volume;
-          
+          const targetVolume = volumeRef.current;
+
           // Aplicar fade-out com proteção de range [0, 1]
-          const fadeOutVolume = originalVolume * (1 - fadeProgress);
+          const fadeOutVolume = targetVolume * (1 - fadeProgress);
           activeAudio.volume = Math.max(0, Math.min(1, fadeOutVolume));
         }
         
         // Fazer loop quando chegar ao endTime
         if (activeAudio.currentTime >= trimData.endTime - 0.05 && !activeAudio.paused) {
           console.log('⏱️ Chegou ao endTime em:', activeAudio.currentTime.toFixed(2) + 's');
-          
+          const targetVolume = volumeRef.current;
+
           if (loop) {
-            // Salvar volume original se ainda não foi salvo
-            if (!activeAudio.dataset.originalVolume) {
-              activeAudio.dataset.originalVolume = activeAudio.volume.toString();
-            }
-            const originalVolume = parseFloat(activeAudio.dataset.originalVolume);
-            
             // Loop: voltar para startTime e fazer fade-in
             activeAudio.currentTime = trimData.startTime;
-            activeAudio.volume = 0; // Começar do zero
+            activeAudio.volume = 0;
             console.log('🔁 Loop com fade - voltando para:', trimData.startTime.toFixed(2) + 's');
-            
+
             // Cancelar fade anterior se existir
             if (fadeAnimationRef.current) {
               cancelAnimationFrame(fadeAnimationRef.current);
             }
-            
+
             // Fade-in usando requestAnimationFrame
             const startTime = performance.now();
-            
+
             const performFadeIn = (currentTime: number) => {
               const elapsed = currentTime - startTime;
               const progress = Math.min(Math.max(elapsed / LOOP_FADE_DURATION, 0), 1);
-              
-              // Aplicar fade-in com proteção de range [0, 1]
-              const fadeInVolume = originalVolume * progress;
+
+              // Fade-in usando volume do usuário como alvo
+              const fadeInVolume = volumeRef.current * progress;
               activeAudio.volume = Math.max(0, Math.min(1, fadeInVolume));
-              
+
               if (progress < 1 && !activeAudio.paused) {
                 fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
               } else {
-                // Garantir volume final no range correto
-                activeAudio.volume = Math.max(0, Math.min(1, originalVolume));
+                activeAudio.volume = Math.max(0, Math.min(1, volumeRef.current));
                 fadeAnimationRef.current = null;
               }
             };
-            
+
             fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
           } else {
-            // Sem loop: pausar
+            // Sem loop: pausar e restaurar volume do usuário
             activeAudio.pause();
+            activeAudio.volume = Math.max(0, Math.min(1, targetVolume));
             console.log('⏸️ Pausado (sem loop)');
-            
-            // Restaurar volume original
-            if (activeAudio.dataset.originalVolume) {
-              activeAudio.volume = parseFloat(activeAudio.dataset.originalVolume);
-            }
           }
         }
       }
@@ -152,12 +144,14 @@ export function useAudioTime({
   }, [audioRef, nextAudioRef, isAudio1Active, loop, trimSilence, trimTimes, currentBlockId]);
 
   // Atualizar loop no elemento de áudio ativo
+  // Quando trimSilence está ativo, o loop customizado controla no endTime do trim,
+  // então o loop nativo deve ser desabilitado para evitar conflito.
   useEffect(() => {
     if (!audioRef.current || !nextAudioRef.current) return;
-    
+
     const activeAudio = isAudio1Active ? audioRef.current : nextAudioRef.current;
-    activeAudio.loop = loop;
-  }, [audioRef, nextAudioRef, isAudio1Active, loop]);
+    activeAudio.loop = loop && !trimSilence;
+  }, [audioRef, nextAudioRef, isAudio1Active, loop, trimSilence]);
 
   const seek = (time: number) => {
     if (!audioRef.current || !nextAudioRef.current) return;

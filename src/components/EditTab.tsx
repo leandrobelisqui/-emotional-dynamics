@@ -1,6 +1,7 @@
 import React from 'react';
-import { Block } from '../types';
+import { Block, LoadedScript } from '../types';
 import BlockList from './BlockList';
+import ScriptListManager from './ScriptListManager';
 import { isTauri, isElectron } from '../utils/platform';
 
 interface EditTabProps {
@@ -8,6 +9,7 @@ interface EditTabProps {
   currentBlockIndex: number;
   volume: number;
   audioBasePath: string;
+  loadedScripts: LoadedScript[];
   onAddBlock: (type: 'text' | 'audio') => void;
   onUpdateBlock: (id: string, updates: Partial<Block>) => void;
   onRemoveBlock: (id: string) => void;
@@ -18,6 +20,10 @@ interface EditTabProps {
   onSaveScript: () => void;
   onLoadScript: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLoadScriptNative: () => void;
+  onRemoveScript: (scriptId: string) => void;
+  onMoveScriptUp: (scriptId: string) => void;
+  onMoveScriptDown: (scriptId: string) => void;
+  onClearAllScripts: () => void;
 }
 
 const EditTab: React.FC<EditTabProps> = ({
@@ -25,6 +31,7 @@ const EditTab: React.FC<EditTabProps> = ({
   currentBlockIndex,
   volume,
   audioBasePath,
+  loadedScripts,
   onAddBlock,
   onUpdateBlock,
   onRemoveBlock,
@@ -35,6 +42,10 @@ const EditTab: React.FC<EditTabProps> = ({
   onSaveScript,
   onLoadScript,
   onLoadScriptNative,
+  onRemoveScript,
+  onMoveScriptUp,
+  onMoveScriptDown,
+  onClearAllScripts,
 }) => {
   const isNativePlatform = isTauri() || isElectron();
   return (
@@ -45,7 +56,7 @@ const EditTab: React.FC<EditTabProps> = ({
           <i className="fas fa-folder text-blue-600 mt-1 mr-3"></i>
           <div className="flex-1">
             <label className="block text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
-              📂 Pasta Base dos Arquivos de Áudio
+              Pasta Base dos Arquivos de Audio
             </label>
             <input
               type="text"
@@ -55,12 +66,21 @@ const EditTab: React.FC<EditTabProps> = ({
               className="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
             <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
-              💡 Informe a pasta onde estão seus arquivos de áudio. Isso será salvo no script e facilitará encontrar os arquivos ao carregar.
+              Informe a pasta onde estao seus arquivos de audio. Isso sera salvo no script e facilitara encontrar os arquivos ao carregar.
             </p>
           </div>
         </div>
       </div>
-      
+
+      {/* Script List Manager */}
+      <ScriptListManager
+        loadedScripts={loadedScripts}
+        onRemoveScript={onRemoveScript}
+        onMoveScriptUp={onMoveScriptUp}
+        onMoveScriptDown={onMoveScriptDown}
+        onClearAllScripts={onClearAllScripts}
+      />
+
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Blocos</h2>
         <div className="flex space-x-2">
@@ -74,12 +94,12 @@ const EditTab: React.FC<EditTabProps> = ({
             onClick={() => onAddBlock('audio')}
             className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
           >
-            + Áudio
+            + Audio
           </button>
         </div>
       </div>
-      
-      <BlockList 
+
+      <BlockList
         blocks={blocks}
         currentBlockIndex={currentBlockIndex}
         audioBasePath={audioBasePath}
@@ -88,7 +108,7 @@ const EditTab: React.FC<EditTabProps> = ({
         onMoveBlockUp={onMoveBlockUp}
         onMoveBlockDown={onMoveBlockDown}
       />
-      
+
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -104,7 +124,7 @@ const EditTab: React.FC<EditTabProps> = ({
             className="w-32"
           />
         </div>
-        
+
         <div className="mt-4 flex justify-between space-x-2">
           <button
             onClick={onSaveScript}
@@ -117,7 +137,8 @@ const EditTab: React.FC<EditTabProps> = ({
               onClick={onLoadScriptNative}
               className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
             >
-              <i className="fas fa-folder-open mr-2"></i>Carregar
+              <i className="fas fa-folder-open mr-2"></i>
+              {loadedScripts.length > 0 ? 'Carregar +' : 'Carregar'}
             </button>
           ) : (
             <label className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors text-center cursor-pointer">
@@ -127,10 +148,17 @@ const EditTab: React.FC<EditTabProps> = ({
                 onChange={onLoadScript}
                 className="hidden"
               />
-              <i className="fas fa-folder-open mr-2"></i>Carregar
+              <i className="fas fa-folder-open mr-2"></i>
+              {loadedScripts.length > 0 ? 'Carregar +' : 'Carregar'}
             </label>
           )}
         </div>
+        {loadedScripts.length > 0 && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+            <i className="fas fa-info-circle mr-1"></i>
+            Clique em "Carregar +" para adicionar mais dinamicas na sequencia
+          </p>
+        )}
       </div>
     </div>
   );

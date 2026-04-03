@@ -7,6 +7,14 @@ export interface Block {
   audioFile?: File | null;
   audioFilePath?: string | null;
   duration?: number;
+  scriptId?: string;
+  scriptName?: string;
+}
+
+export interface LoadedScript {
+  id: string;
+  name: string;
+  blockCount: number;
 }
 
 export interface BlockListProps {

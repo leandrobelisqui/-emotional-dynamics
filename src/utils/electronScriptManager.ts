@@ -18,18 +18,19 @@ export async function saveScriptToFile(data: any): Promise<boolean> {
   }
 }
 
-export async function loadScriptFromFile(): Promise<any | null> {
+export async function loadScriptFromFile(): Promise<{ data: any; fileName: string } | null> {
   if (!window.electron) {
     console.error('Electron API not available');
     return null;
   }
-  
+
   try {
     const path = await window.electron.dialog.openJsonFile();
     if (!path) return null;
-    
+
     const content = await window.electron.fs.readTextFile(path);
-    return JSON.parse(content);
+    const fileName = path.split(/[/\\]/).pop() || 'script.json';
+    return { data: JSON.parse(content), fileName: fileName.replace(/\.json$/i, '') };
   } catch (error) {
     console.error('Error loading script:', error);
     return null;

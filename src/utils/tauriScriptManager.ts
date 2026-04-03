@@ -14,13 +14,14 @@ export async function saveScriptToFile(data: any): Promise<boolean> {
   }
 }
 
-export async function loadScriptFromFile(): Promise<any | null> {
+export async function loadScriptFromFile(): Promise<{ data: any; fileName: string } | null> {
   try {
     const path = await selectJsonFile();
     if (!path) return null;
-    
+
     const content = await readTextFile(path);
-    return JSON.parse(content);
+    const fileName = path.split(/[/\\]/).pop() || 'script.json';
+    return { data: JSON.parse(content), fileName: fileName.replace(/\.json$/i, '') };
   } catch (error) {
     console.error('Error loading script:', error);
     return null;

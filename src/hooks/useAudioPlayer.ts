@@ -20,6 +20,7 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
   
   // Track which audio element is currently active (true = audio1, false = audio2)
   const [isAudio1Active, setIsAudio1Active] = useState<boolean>(true);
+  const isAudio1ActiveRef = useRef<boolean>(true);
   
   // Cache de tempos de trim para cada arquivo de áudio
   const trimTimesRef = useRef<Map<string, { startTime: number; endTime: number }>>(new Map());
@@ -32,10 +33,14 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
   useEffect(() => {
     volumeRef.current = volume;
   }, [volume]);
-  
+
   useEffect(() => {
     crossfadeDurationRef.current = crossfadeDuration;
   }, [crossfadeDuration]);
+
+  useEffect(() => {
+    isAudio1ActiveRef.current = isAudio1Active;
+  }, [isAudio1Active]);
 
   // Effect to handle audio playback with crossfade and memory management
   useEffect(() => {
@@ -44,9 +49,9 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
     const currentBlock = blocks[currentAudioIndex];
     
     if (currentBlock.type === 'audio' && currentBlock.audioFile && audio1Ref.current && audio2Ref.current) {
-      // Get current and next audio elements based on which is active
-      const currentAudio = isAudio1Active ? audio1Ref.current : audio2Ref.current;
-      const nextAudio = isAudio1Active ? audio2Ref.current : audio1Ref.current;
+      // Get current and next audio elements based on which is active (use ref to avoid stale closure)
+      const currentAudio = isAudio1ActiveRef.current ? audio1Ref.current : audio2Ref.current;
+      const nextAudio = isAudio1ActiveRef.current ? audio2Ref.current : audio1Ref.current;
       
       // Check if there's currently playing audio (for crossfade)
       const shouldCrossfade = !currentAudio.paused && currentAudio.src;
@@ -85,12 +90,8 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
         
         // Wait for audio to be fully loaded before starting crossfade
         const startCrossfade = async () => {
-          // Garantir que o volume do currentAudio está correto antes do crossfade
-          // (pode ter sido modificado pelo fade do loop)
-          if (currentAudio.volume < volumeRef.current * 0.9) {
-            console.log('🔊 Restaurando volume antes do crossfade:', volumeRef.current);
-            currentAudio.volume = volumeRef.current;
-          }
+          // Restaurar volume do usuário antes do crossfade (pode ter sido reduzido pelo fade do loop)
+          currentAudio.volume = volumeRef.current;
           
           // Aplicar trim se disponível
           if (trimSilence && trimTimesRef.current.has(currentBlock.id)) {
@@ -135,9 +136,10 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
               currentAudio.currentTime = 0;
               currentAudio.src = '';
               currentAudio.volume = 0;
-              
-              // Switch active audio reference
-              setIsAudio1Active(!isAudio1Active);
+              delete currentAudio.dataset.originalVolume;
+
+              // Switch active audio reference (functional update to avoid stale closure)
+              setIsAudio1Active(prev => !prev);
               
               // O monitoramento de endTime será feito pelo useAudioTime
               
@@ -302,5 +304,6 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
     setCurrentAudioIndex,
     isAudio1Active,
     trimTimesRef,
+    volumeRef,
   };
 }

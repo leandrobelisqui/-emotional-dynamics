@@ -9,6 +9,11 @@ interface ScriptData {
   crossfadeDuration: number;
 }
 
+interface LoadResult {
+  data: ScriptData;
+  fileName: string;
+}
+
 export function useScriptManager() {
   const saveScript = async (
     blocks: Block[],
@@ -29,7 +34,7 @@ export function useScriptManager() {
       volume,
       crossfadeDuration,
     };
-    
+
     // Se está no Electron, usa API nativa
     if (isElectron()) {
       try {
@@ -44,7 +49,7 @@ export function useScriptManager() {
       }
       return;
     }
-    
+
     // Se está no Tauri, usa API nativa
     if (isTauri()) {
       try {
@@ -59,18 +64,18 @@ export function useScriptManager() {
       }
       return;
     }
-    
+
     // Código para navegador
     const dataStr = JSON.stringify(script, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    
+
     const exportName = `emotional-dynamics-${new Date().toISOString().slice(0, 10)}.json`;
-    
+
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportName);
     linkElement.click();
-    
+
     // Show info about saved paths
     if (audioBasePath) {
       console.log('Pasta base dos áudios:', audioBasePath);
@@ -81,16 +86,17 @@ export function useScriptManager() {
     }
   };
 
-  const loadScriptTauri = async (): Promise<ScriptData | null> => {
+  const loadScriptTauri = async (): Promise<LoadResult | null> => {
     // Se está no Electron
     if (isElectron()) {
       try {
         const { loadScriptFromFile } = await import('../utils/electronScriptManager');
         const { loadAudioFile } = await import('../utils/electronAudioLoader');
-        
-        const data = await loadScriptFromFile();
-        if (!data) return null;
-        
+
+        const result = await loadScriptFromFile();
+        if (!result) return null;
+        const { data, fileName } = result;
+
         // Carregar áudios automaticamente!
         const loadedBlocks = await Promise.all(
           data.blocks.map(async (block: any) => {
@@ -108,19 +114,19 @@ export function useScriptManager() {
             };
           })
         );
-        
+
         const loadedAudios = loadedBlocks.filter((b: any) => b.type === 'audio' && b.audioFile).length;
         const totalAudios = loadedBlocks.filter((b: any) => b.type === 'audio').length;
-        
+
         if (loadedAudios === totalAudios) {
-          alert('✅ Script carregado com sucesso!\n\nTodos os áudios foram carregados automaticamente!');
+          console.log(`✅ Script "${fileName}" carregado - todos os áudios OK`);
         } else {
-          alert(`Script carregado!\n\n${loadedAudios}/${totalAudios} áudios carregados automaticamente.\nAlguns arquivos não foram encontrados.`);
+          console.log(`⚠️ Script "${fileName}" carregado - ${loadedAudios}/${totalAudios} áudios`);
         }
-        
+
         return {
-          ...data,
-          blocks: loadedBlocks
+          data: { ...data, blocks: loadedBlocks },
+          fileName,
         };
       } catch (error) {
         console.error('Error loading script in Electron:', error);
@@ -128,15 +134,16 @@ export function useScriptManager() {
         return null;
       }
     }
-    
+
     // Se está no Tauri
     try {
       const { loadScriptFromFile } = await import('../utils/tauriScriptManager');
       const { loadAudioFile } = await import('../utils/tauriAudioLoader');
-      
-      const data = await loadScriptFromFile();
-      if (!data) return null;
-      
+
+      const result = await loadScriptFromFile();
+      if (!result) return null;
+      const { data, fileName } = result;
+
       // Carregar áudios automaticamente!
       const loadedBlocks = await Promise.all(
         data.blocks.map(async (block: any) => {
@@ -154,19 +161,19 @@ export function useScriptManager() {
           };
         })
       );
-      
+
       const loadedAudios = loadedBlocks.filter((b: any) => b.type === 'audio' && b.audioFile).length;
       const totalAudios = loadedBlocks.filter((b: any) => b.type === 'audio').length;
-      
+
       if (loadedAudios === totalAudios) {
-        alert('✅ Script carregado com sucesso!\n\nTodos os áudios foram carregados automaticamente!');
+        console.log(`✅ Script "${fileName}" carregado - todos os áudios OK`);
       } else {
-        alert(`Script carregado!\n\n${loadedAudios}/${totalAudios} áudios carregados automaticamente.\nAlguns arquivos não foram encontrados.`);
+        console.log(`⚠️ Script "${fileName}" carregado - ${loadedAudios}/${totalAudios} áudios`);
       }
-      
+
       return {
-        ...data,
-        blocks: loadedBlocks
+        data: { ...data, blocks: loadedBlocks },
+        fileName,
       };
     } catch (error) {
       console.error('Error loading script in Tauri:', error);
@@ -175,14 +182,14 @@ export function useScriptManager() {
     }
   };
 
-  const loadScriptBrowser = (fileContent: string): ScriptData | null => {
+  const loadScriptBrowser = (fileContent: string, fileName?: string): LoadResult | null => {
     try {
       const data = JSON.parse(fileContent);
-      
+
       if (!data.blocks || !Array.isArray(data.blocks)) {
         throw new Error('Formato de arquivo inválido');
       }
-      
+
       // Load blocks structure (audio files will need to be manually reloaded)
       const loadedBlocks = data.blocks.map((block: any) => ({
         id: block.id || uuidv4(),
@@ -192,45 +199,27 @@ export function useScriptManager() {
         audioFilePath: block.audioFilePath || null,
         duration: block.duration,
       }));
-      
+
       const audioBlocks = loadedBlocks.filter((b: any) => b.type === 'audio');
       if (audioBlocks.length > 0) {
-        // Prepare message with full paths
         const basePath = data.audioBasePath || '';
         const pathsList = audioBlocks.map((b: any, i: number) => {
-          let fileName = b.audioFilePath || 'Sem informação';
-          // Remove fakepath if present
-          fileName = fileName.replace(/^C:\\fakepath\\/i, '');
-          
-          // Construct full path if base path exists
-          const fullPath = basePath 
-            ? `${basePath}${basePath.endsWith('\\') ? '' : '\\'}${fileName}`
-            : fileName;
-          
+          let filePath = b.audioFilePath || 'Sem informação';
+          filePath = filePath.replace(/^C:\\fakepath\\/i, '');
+          const fullPath = basePath
+            ? `${basePath}${basePath.endsWith('\\') ? '' : '\\'}${filePath}`
+            : filePath;
           return `${i + 1}. ${fullPath}`;
         }).join('\n');
-        
-        const basePathInfo = basePath 
-          ? `📂 Pasta base configurada: ${basePath}\n\n`
-          : `⚠️ Pasta base não configurada. Configure na aba de Edição.\n\n`;
-        
-        alert(
-          `Script carregado com sucesso!\n\n` +
-          basePathInfo +
-          `📁 ${audioBlocks.length} bloco(s) de áudio encontrado(s)\n\n` +
-          `⚠️ Os arquivos de áudio precisam ser recarregados:\n` +
-          `Vá para a aba de Edição e clique em "Recarregar" nos blocos com aviso amarelo.\n\n` +
-          `📝 Caminhos completos esperados:\n` +
-          pathsList +
-          `\n\n💡 Dica: Os arquivos devem estar na pasta configurada.`
-        );
-      } else {
-        alert('Script carregado com sucesso!');
+
+        console.log(`📁 Script carregado com ${audioBlocks.length} áudio(s):\n${pathsList}`);
       }
-      
+
+      const name = fileName || 'script';
+
       return {
-        ...data,
-        blocks: loadedBlocks
+        data: { ...data, blocks: loadedBlocks },
+        fileName: name.replace(/\.json$/i, ''),
       };
     } catch (error) {
       console.error('Error loading script:', error);
