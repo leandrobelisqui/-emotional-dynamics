@@ -9,15 +9,19 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100 dark:bg-gray-800;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-blue-400 dark:bg-blue-600 rounded-full;
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
 }
 
 /* Animation for block transitions */
@@ -37,45 +41,74 @@
   @apply opacity-0 transform translate-y-2 transition-all duration-300;
 }
 
-/* Custom slider styles */
+/* Slider styles - smaller and more refined */
 input[type="range"].slider {
   -webkit-appearance: none;
   appearance: none;
   outline: none;
+  border-radius: 9999px;
 }
 
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: white;
   cursor: pointer;
-  border: 2px solid #3b82f6;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  border: 2px solid #0ea5e9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s ease;
 }
 
 input[type="range"].slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 input[type="range"].slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: white;
   cursor: pointer;
-  border: 2px solid #3b82f6;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  border: 2px solid #0ea5e9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s ease;
 }
 
 input[type="range"].slider::-moz-range-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Bottom player bar - thin progress bar */
+.progress-bar-track {
+  @apply h-1 bg-gray-200 dark:bg-gray-700 relative;
+  transition: height 0.15s ease;
+}
+
+.progress-bar-track:hover {
+  @apply h-1.5;
+}
+
+.progress-bar-fill {
+  @apply h-full bg-gradient-to-r from-violet-500 to-sky-500 absolute top-0 left-0;
+  transition: width 0.1s linear;
+}
+
+.progress-bar-track:hover .progress-bar-fill {
+  @apply from-violet-400 to-sky-400;
+}
+
+/* Slider track color variable for dark mode */
+:root {
+  --slider-track: #e5e7eb;
+}
+
+.dark {
+  --slider-track: #374151;
 }
 
 /* Markdown custom styles */

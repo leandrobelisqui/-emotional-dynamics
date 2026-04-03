@@ -1,6 +1,5 @@
 import React from 'react';
 import { Block, LoadedScript } from '../types';
-import FloatingControls from './FloatingControls';
 import MarkdownText from './MarkdownText';
 
 interface ViewTabProps {
@@ -8,25 +7,9 @@ interface ViewTabProps {
   currentBlockIndex: number;
   currentAudioIndex: number;
   isPlaying: boolean;
-  volume: number;
-  crossfadeDuration: number;
-  currentTime: number;
-  duration: number;
-  loop: boolean;
   fontSize: number;
-  trimSilence: boolean;
   loadedScripts: LoadedScript[];
-  onPlayPause: () => void;
-  onStop: () => void;
   onPlayBlockAudio: (index: number) => void;
-  onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCrossfadeDurationChange: (duration: number) => void;
-  onSeek: (time: number) => void;
-  onLoopToggle: () => void;
-  onTrimSilenceToggle: () => void;
-  onIncreaseFontSize: () => void;
-  onDecreaseFontSize: () => void;
-  onResetFontSize: () => void;
 }
 
 const ViewTab: React.FC<ViewTabProps> = ({
@@ -34,27 +17,10 @@ const ViewTab: React.FC<ViewTabProps> = ({
   currentBlockIndex,
   currentAudioIndex,
   isPlaying,
-  volume,
-  crossfadeDuration,
-  currentTime,
-  duration,
-  loop,
   fontSize,
-  trimSilence,
   loadedScripts,
-  onPlayPause,
-  onStop,
   onPlayBlockAudio,
-  onVolumeChange,
-  onCrossfadeDurationChange,
-  onSeek,
-  onLoopToggle,
-  onTrimSilenceToggle,
-  onIncreaseFontSize,
-  onDecreaseFontSize,
-  onResetFontSize,
 }) => {
-  // Determine script boundaries for visual separators
   const getScriptIndex = (block: Block): number => {
     if (!block.scriptId) return -1;
     return loadedScripts.findIndex(s => s.id === block.scriptId);
@@ -67,137 +33,118 @@ const ViewTab: React.FC<ViewTabProps> = ({
     return !!current?.scriptId && current.scriptId !== prev?.scriptId;
   };
 
+  const separatorColors = [
+    { bg: 'bg-indigo-50 dark:bg-indigo-950/40', border: 'border-indigo-400 dark:border-indigo-500', text: 'text-indigo-700 dark:text-indigo-300', badge: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' },
+    { bg: 'bg-teal-50 dark:bg-teal-950/40', border: 'border-teal-400 dark:border-teal-500', text: 'text-teal-700 dark:text-teal-300', badge: 'bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400' },
+    { bg: 'bg-amber-50 dark:bg-amber-950/40', border: 'border-amber-400 dark:border-amber-500', text: 'text-amber-700 dark:text-amber-300', badge: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400' },
+    { bg: 'bg-rose-50 dark:bg-rose-950/40', border: 'border-rose-400 dark:border-rose-500', text: 'text-rose-700 dark:text-rose-300', badge: 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400' },
+    { bg: 'bg-cyan-50 dark:bg-cyan-950/40', border: 'border-cyan-400 dark:border-cyan-500', text: 'text-cyan-700 dark:text-cyan-300', badge: 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-600 dark:text-cyan-400' },
+  ];
+
   return (
-    <>
-      {/* Floating Controls */}
-      <FloatingControls
-        volume={volume}
-        crossfadeDuration={crossfadeDuration}
-        isPlaying={isPlaying}
-        currentTime={currentTime}
-        duration={duration}
-        loop={loop}
-        fontSize={fontSize}
-        trimSilence={trimSilence}
-        onVolumeChange={onVolumeChange}
-        onCrossfadeDurationChange={onCrossfadeDurationChange}
-        onPlayPause={onPlayPause}
-        onStop={onStop}
-        onSeek={onSeek}
-        onLoopToggle={onLoopToggle}
-        onTrimSilenceToggle={onTrimSilenceToggle}
-        onIncreaseFontSize={onIncreaseFontSize}
-        onDecreaseFontSize={onDecreaseFontSize}
-        onResetFontSize={onResetFontSize}
-      />
+    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+      {/* Header */}
+      <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Visualizacao</h2>
+        {loadedScripts.length > 1 && (
+          <span className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-full font-medium">
+            <i className="fas fa-layer-group mr-1"></i>
+            {loadedScripts.length} dinamicas
+          </span>
+        )}
+      </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Visualizacao</h2>
-          {loadedScripts.length > 1 && (
-            <span className="text-sm text-indigo-600 dark:text-indigo-400">
-              <i className="fas fa-layer-group mr-1"></i>
-              {loadedScripts.length} dinamicas em sequencia
-            </span>
-          )}
-        </div>
-
-      <div className="min-h-96 max-h-[600px] overflow-y-auto border-2 border-gray-300 dark:border-gray-600 rounded-lg p-6 space-y-6">
+      {/* Content - responsive height */}
+      <div className="overflow-y-auto p-6 space-y-4" style={{ maxHeight: 'calc(100vh - 14rem)' }}>
         {blocks.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-            Adicione blocos na aba de Edicao para comecar sua dinamica
-          </p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-music text-2xl text-gray-300 dark:text-gray-600"></i>
+            </div>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">
+              Adicione blocos na aba de Edicao para comecar
+            </p>
+          </div>
         ) : (
           blocks.map((block, index) => {
             const showSeparator = isFirstBlockOfScript(index) && loadedScripts.length > 1;
             const scriptIdx = getScriptIndex(block);
-
-            // Script separator colors (cycle through palette)
-            const separatorColors = [
-              { bg: 'bg-indigo-100 dark:bg-indigo-900/30', border: 'border-indigo-400 dark:border-indigo-600', text: 'text-indigo-700 dark:text-indigo-300', icon: 'text-indigo-500' },
-              { bg: 'bg-teal-100 dark:bg-teal-900/30', border: 'border-teal-400 dark:border-teal-600', text: 'text-teal-700 dark:text-teal-300', icon: 'text-teal-500' },
-              { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-400 dark:border-amber-600', text: 'text-amber-700 dark:text-amber-300', icon: 'text-amber-500' },
-              { bg: 'bg-rose-100 dark:bg-rose-900/30', border: 'border-rose-400 dark:border-rose-600', text: 'text-rose-700 dark:text-rose-300', icon: 'text-rose-500' },
-              { bg: 'bg-cyan-100 dark:bg-cyan-900/30', border: 'border-cyan-400 dark:border-cyan-600', text: 'text-cyan-700 dark:text-cyan-300', icon: 'text-cyan-500' },
-            ];
             const colorSet = separatorColors[scriptIdx % separatorColors.length] || separatorColors[0];
-
-            // Block styling
-            const getBlockClasses = () => {
-              const isActive = index === currentBlockIndex;
-
-              if (block.type === 'audio') {
-                return isActive
-                  ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-500 dark:border-green-600 shadow-md'
-                  : 'bg-green-50/50 dark:bg-green-900/10 border border-green-300 dark:border-green-800';
-              } else {
-                return isActive
-                  ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-500 shadow-md'
-                  : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600';
-              }
-            };
+            const isActive = index === currentBlockIndex;
+            const isPlayingAudio = index === currentAudioIndex && isPlaying;
 
             return (
               <React.Fragment key={block.id}>
                 {/* Script separator */}
                 {showSeparator && (
-                  <div className={`flex items-center gap-3 py-3 px-4 rounded-lg ${colorSet.bg} border-l-4 ${colorSet.border}`}>
-                    <i className={`fas fa-bookmark ${colorSet.icon}`}></i>
-                    <div className="flex-1">
-                      <span className={`text-sm font-semibold ${colorSet.text}`}>
-                        {block.scriptName || 'Dinamica'}
-                      </span>
-                      <span className={`text-xs ml-2 ${colorSet.text} opacity-70`}>
-                        ({scriptIdx + 1}/{loadedScripts.length})
-                      </span>
-                    </div>
+                  <div className={`flex items-center gap-3 py-2.5 px-4 rounded-lg ${colorSet.bg} border-l-4 ${colorSet.border}`}>
+                    <i className={`fas fa-bookmark ${colorSet.text} text-sm`}></i>
+                    <span className={`text-sm font-semibold ${colorSet.text}`}>
+                      {block.scriptName || 'Dinamica'}
+                    </span>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${colorSet.badge}`}>
+                      {scriptIdx + 1} de {loadedScripts.length}
+                    </span>
                   </div>
                 )}
 
                 {/* Block content */}
                 <div
-                  className={`p-4 rounded-lg transition-all duration-300 ${getBlockClasses()}`}
+                  className={`rounded-lg transition-all duration-200 ${
+                    block.type === 'audio'
+                      ? isActive
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-l-emerald-500 border border-emerald-200 dark:border-emerald-800 shadow-sm'
+                        : 'bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 hover:border-emerald-300 dark:hover:border-emerald-800'
+                      : isActive
+                        ? 'bg-sky-50 dark:bg-sky-950/30 border-l-4 border-l-sky-500 border border-sky-200 dark:border-sky-800 shadow-sm'
+                        : 'bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800'
+                  } p-4`}
                 >
                   {block.type === 'text' ? (
                     <div>
-                      <div className="flex items-center mb-2">
-                        <i className="fas fa-font text-blue-500 dark:text-blue-400 mr-2"></i>
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Bloco de Texto</span>
-                      </div>
                       {block.content ? (
                         <MarkdownText content={block.content} fontSize={fontSize} />
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-500 italic">Texto vazio</span>
+                        <span className="text-gray-400 dark:text-gray-500 italic text-sm">Texto vazio</span>
                       )}
                     </div>
                   ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          <i className={`fas fa-music mr-2 ${
-                            index === currentAudioIndex && isPlaying
-                              ? 'text-green-600 dark:text-green-400 animate-pulse'
-                              : 'text-green-600 dark:text-green-400'
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          isPlayingAudio
+                            ? 'bg-emerald-500 dark:bg-emerald-600'
+                            : 'bg-emerald-100 dark:bg-emerald-900/40'
+                        }`}>
+                          <i className={`fas ${isPlayingAudio ? 'fa-volume-up' : 'fa-music'} text-sm ${
+                            isPlayingAudio
+                              ? 'text-white animate-pulse'
+                              : 'text-emerald-600 dark:text-emerald-400'
                           }`}></i>
-                          <span className="text-sm font-semibold text-green-700 dark:text-green-300">Bloco de Audio</span>
                         </div>
-                        {block.audioFile && (
-                          <button
-                            onClick={() => onPlayBlockAudio(index)}
-                            className="px-3 py-1 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white text-sm rounded transition-colors shadow-sm"
-                          >
-                            <i className="fas fa-play mr-1"></i>
-                            Tocar
-                          </button>
-                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                            {block.audioFile?.name || <span className="text-gray-400 italic">Nenhum audio</span>}
+                          </p>
+                          {block.duration ? (
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                              {Math.floor(block.duration / 60)}:{String(Math.floor(block.duration % 60)).padStart(2, '0')}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        {block.audioFile?.name || <span className="text-gray-400 dark:text-gray-500 italic">Nenhum audio selecionado</span>}
-                      </p>
-                      {block.duration && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Duracao: {Math.floor(block.duration / 60)}:{String(Math.floor(block.duration % 60)).padStart(2, '0')}
-                        </p>
+                      {block.audioFile && (
+                        <button
+                          onClick={() => onPlayBlockAudio(index)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex-shrink-0 ${
+                            isPlayingAudio
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800'
+                          }`}
+                        >
+                          <i className={`fas ${isPlayingAudio ? 'fa-pause' : 'fa-play'} mr-1`}></i>
+                          {isPlayingAudio ? 'Tocando' : 'Tocar'}
+                        </button>
                       )}
                     </div>
                   )}
@@ -208,7 +155,6 @@ const ViewTab: React.FC<ViewTabProps> = ({
         )}
       </div>
     </div>
-    </>
   );
 };
 

@@ -19,7 +19,7 @@ const ScriptListManager: React.FC<ScriptListManagerProps> = ({
   if (loadedScripts.length === 0) return null;
 
   return (
-    <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg">
+    <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-200 flex items-center">
           <i className="fas fa-layer-group mr-2 text-indigo-600 dark:text-indigo-400"></i>

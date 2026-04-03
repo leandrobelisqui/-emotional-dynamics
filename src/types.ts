@@ -39,12 +39,3 @@ export interface BlockItemProps {
   onMoveDown: () => void;
 }
 
-export interface PlayerControlsProps {
-  isPlaying: boolean;
-  onPlayPause: () => void;
-  onStop: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
-  hasPrevious: boolean;
-  hasNext: boolean;
-}
