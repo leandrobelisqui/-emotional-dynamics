@@ -5,7 +5,16 @@ export interface Block {
   type: BlockType;
   content: string | null;
   audioFile?: File | null;
+  /**
+   * Caminho completo do arquivo (resolvido em runtime).
+   * NÃO é persistido no JSON — é derivado de `audioBasePath + audioFileName` ao carregar.
+   */
   audioFilePath?: string | null;
+  /**
+   * Apenas o nome do arquivo (ex.: "musica.mp3"). Persistido no JSON.
+   * A pasta base fica em `ScriptData.audioBasePath`.
+   */
+  audioFileName?: string | null;
   duration?: number;
   scriptId?: string;
   scriptName?: string;

@@ -39,14 +39,67 @@ export function useAudioTime({
     // Determinar qual áudio está ativo
     const activeAudio = isAudio1Active ? audio1 : audio2;
 
+    // Retorna trimData válido para o bloco atual, ou null se não houver/for inválido.
+    const getValidTrimData = (): { startTime: number; endTime: number } | null => {
+      if (!trimSilence || !trimTimes || !currentBlockId) return null;
+      const data = trimTimes.get(currentBlockId);
+      if (!data) return null;
+      if (
+        !Number.isFinite(data.startTime) ||
+        !Number.isFinite(data.endTime) ||
+        data.endTime <= 0 ||
+        data.endTime <= data.startTime
+      ) {
+        return null;
+      }
+      return data;
+    };
+
+    // Fade-in reutilizável: zera volume, depois sobe até volumeRef.current em LOOP_FADE_DURATION ms.
+    const startFadeIn = () => {
+      if (fadeAnimationRef.current) {
+        cancelAnimationFrame(fadeAnimationRef.current);
+      }
+      activeAudio.volume = 0;
+      const startTs = performance.now();
+
+      const performFadeIn = (now: number) => {
+        const elapsed = now - startTs;
+        const progress = Math.min(Math.max(elapsed / LOOP_FADE_DURATION, 0), 1);
+
+        const fadeInVolume = volumeRef.current * progress;
+        activeAudio.volume = Math.max(0, Math.min(1, fadeInVolume));
+
+        if (progress < 1 && !activeAudio.paused) {
+          fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
+        } else {
+          activeAudio.volume = Math.max(0, Math.min(1, volumeRef.current));
+          fadeAnimationRef.current = null;
+        }
+      };
+
+      fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
+    };
+
+    // Volta ao início do trim e inicia fade-in + play (usado tanto pelo timeupdate quanto pelo ended).
+    const loopBackToTrimStart = (trimData: { startTime: number; endTime: number }) => {
+      activeAudio.currentTime = trimData.startTime;
+      console.log('🔁 Loop com fade - voltando para:', trimData.startTime.toFixed(2) + 's');
+      startFadeIn();
+      // Se o áudio pausou (ex.: via evento `ended`), retomar reprodução.
+      if (activeAudio.paused) {
+        activeAudio.play().catch(e => console.error('Error resuming trim loop:', e));
+      }
+    };
+
     const updateTime = () => {
       setCurrentTime(activeAudio.currentTime);
-      
-      // Monitorar endTime se trim estiver ativado
-      if (trimSilence && trimTimes && currentBlockId && trimTimes.has(currentBlockId)) {
-        const trimData = trimTimes.get(currentBlockId)!;
+
+      // Monitorar endTime se trim estiver ativado e dados forem válidos
+      const trimData = getValidTrimData();
+      if (trimData) {
         const fadeStartTime = trimData.endTime - (LOOP_FADE_DURATION / 1000); // Iniciar fade antes do fim
-        
+
         // Iniciar fade-out quando chegar perto do endTime
         if (activeAudio.currentTime >= fadeStartTime && activeAudio.currentTime < trimData.endTime && !activeAudio.paused) {
           const fadeProgress = Math.min(Math.max((activeAudio.currentTime - fadeStartTime) / (LOOP_FADE_DURATION / 1000), 0), 1);
@@ -56,43 +109,16 @@ export function useAudioTime({
           const fadeOutVolume = targetVolume * (1 - fadeProgress);
           activeAudio.volume = Math.max(0, Math.min(1, fadeOutVolume));
         }
-        
-        // Fazer loop quando chegar ao endTime
-        if (activeAudio.currentTime >= trimData.endTime - 0.05 && !activeAudio.paused) {
+
+        // Fazer loop quando chegar ao endTime.
+        // Tolerância maior (0.15s) para absorver a granularidade do `timeupdate` (~250ms).
+        // O evento `ended` também serve de backup caso este tick não dispare a tempo.
+        if (activeAudio.currentTime >= trimData.endTime - 0.15 && !activeAudio.paused) {
           console.log('⏱️ Chegou ao endTime em:', activeAudio.currentTime.toFixed(2) + 's');
           const targetVolume = volumeRef.current;
 
           if (loop) {
-            // Loop: voltar para startTime e fazer fade-in
-            activeAudio.currentTime = trimData.startTime;
-            activeAudio.volume = 0;
-            console.log('🔁 Loop com fade - voltando para:', trimData.startTime.toFixed(2) + 's');
-
-            // Cancelar fade anterior se existir
-            if (fadeAnimationRef.current) {
-              cancelAnimationFrame(fadeAnimationRef.current);
-            }
-
-            // Fade-in usando requestAnimationFrame
-            const startTime = performance.now();
-
-            const performFadeIn = (currentTime: number) => {
-              const elapsed = currentTime - startTime;
-              const progress = Math.min(Math.max(elapsed / LOOP_FADE_DURATION, 0), 1);
-
-              // Fade-in usando volume do usuário como alvo
-              const fadeInVolume = volumeRef.current * progress;
-              activeAudio.volume = Math.max(0, Math.min(1, fadeInVolume));
-
-              if (progress < 1 && !activeAudio.paused) {
-                fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
-              } else {
-                activeAudio.volume = Math.max(0, Math.min(1, volumeRef.current));
-                fadeAnimationRef.current = null;
-              }
-            };
-
-            fadeAnimationRef.current = requestAnimationFrame(performFadeIn);
+            loopBackToTrimStart(trimData);
           } else {
             // Sem loop: pausar e restaurar volume do usuário
             activeAudio.pause();
@@ -108,13 +134,22 @@ export function useAudioTime({
     };
 
     const handleEnded = () => {
-      // Só processar ended se não estiver usando trim
-      // (trim já controla via timeupdate)
-      if (!trimSilence) {
+      const trimData = getValidTrimData();
+
+      if (trimData) {
+        // Backup: se o `timeupdate` não conseguiu disparar o loop antes do fim do áudio
+        // (comum quando endTime ≈ duration), tratar `ended` como gatilho do loop trimado.
         if (loop) {
-          activeAudio.currentTime = 0;
-          activeAudio.play().catch(e => console.error('Error looping audio:', e));
+          console.log('🔚 Evento ended em modo trim — forçando loop');
+          loopBackToTrimStart(trimData);
         }
+        return;
+      }
+
+      // Sem trim: comportamento padrão de loop manual (loop nativo está desabilitado apenas em modo trim).
+      if (!trimSilence && loop) {
+        activeAudio.currentTime = 0;
+        activeAudio.play().catch(e => console.error('Error looping audio:', e));
       }
     };
 

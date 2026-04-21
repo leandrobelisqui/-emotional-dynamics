@@ -1,5 +1,6 @@
 import { Block } from '../types';
 import { isTauri, isElectron } from '../utils/platform';
+import { getBasename, joinPath, deriveCommonBasePath } from '../utils/pathUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ScriptData {
@@ -21,16 +22,33 @@ export function useScriptManager() {
     crossfadeDuration: number,
     audioBasePath: string
   ) => {
+    // Se audioBasePath não foi definido manualmente, derivar dos caminhos dos áudios.
+    const audioPaths = blocks
+      .filter(b => b.type === 'audio' && b.audioFilePath)
+      .map(b => b.audioFilePath as string);
+    const effectiveBasePath = audioBasePath || deriveCommonBasePath(audioPaths);
+
     const script = {
-      audioBasePath: audioBasePath || '',
-      blocks: blocks.map(block => ({
-        id: block.id,
-        type: block.type,
-        content: block.content,
-        audioFilePath: block.audioFilePath || null,
-        audioFileName: block.audioFile?.name || null,
-        duration: block.duration,
-      })),
+      // Pasta base dos áudios — altere isso se mover os arquivos para outro lugar.
+      audioBasePath: effectiveBasePath,
+      blocks: blocks.map(block => {
+        // Nome do arquivo: preferir File.name, senão basename do path, senão audioFileName existente.
+        const fileName =
+          block.audioFile?.name ||
+          (block.audioFilePath ? getBasename(block.audioFilePath) : null) ||
+          block.audioFileName ||
+          null;
+
+        return {
+          id: block.id,
+          type: block.type,
+          content: block.content,
+          // Salvamos APENAS o nome do arquivo. O caminho completo é reconstruído
+          // no load via `audioBasePath + audioFileName`.
+          audioFileName: fileName,
+          duration: block.duration,
+        };
+      }),
       volume,
       crossfadeDuration,
     };
@@ -96,17 +114,27 @@ export function useScriptManager() {
         const result = await loadScriptFromFile();
         if (!result) return null;
         const { data, fileName } = result;
+        const basePath = data.audioBasePath || '';
 
         // Carregar áudios automaticamente!
         const loadedBlocks = await Promise.all(
           data.blocks.map(async (block: any) => {
-            if (block.type === 'audio' && block.audioFilePath) {
-              const audioFile = await loadAudioFile(block.audioFilePath);
-              return {
-                ...block,
-                audioFile,
-                id: block.id || uuidv4()
-              };
+            if (block.type === 'audio') {
+              // Novo formato: basePath + audioFileName. Legado: audioFilePath completo.
+              const resolvedPath = block.audioFileName
+                ? joinPath(basePath, block.audioFileName)
+                : (block.audioFilePath || null);
+
+              if (resolvedPath) {
+                const audioFile = await loadAudioFile(resolvedPath);
+                return {
+                  ...block,
+                  audioFile,
+                  audioFilePath: resolvedPath,
+                  audioFileName: block.audioFileName || (block.audioFilePath ? getBasename(block.audioFilePath) : null),
+                  id: block.id || uuidv4(),
+                };
+              }
             }
             return {
               ...block,
@@ -143,17 +171,26 @@ export function useScriptManager() {
       const result = await loadScriptFromFile();
       if (!result) return null;
       const { data, fileName } = result;
+      const basePath = data.audioBasePath || '';
 
       // Carregar áudios automaticamente!
       const loadedBlocks = await Promise.all(
         data.blocks.map(async (block: any) => {
-          if (block.type === 'audio' && block.audioFilePath) {
-            const audioFile = await loadAudioFile(block.audioFilePath);
-            return {
-              ...block,
-              audioFile,
-              id: block.id || uuidv4()
-            };
+          if (block.type === 'audio') {
+            const resolvedPath = block.audioFileName
+              ? joinPath(basePath, block.audioFileName)
+              : (block.audioFilePath || null);
+
+            if (resolvedPath) {
+              const audioFile = await loadAudioFile(resolvedPath);
+              return {
+                ...block,
+                audioFile,
+                audioFilePath: resolvedPath,
+                audioFileName: block.audioFileName || (block.audioFilePath ? getBasename(block.audioFilePath) : null),
+                id: block.id || uuidv4(),
+              };
+            }
           }
           return {
             ...block,
@@ -190,25 +227,31 @@ export function useScriptManager() {
         throw new Error('Formato de arquivo inválido');
       }
 
-      // Load blocks structure (audio files will need to be manually reloaded)
-      const loadedBlocks = data.blocks.map((block: any) => ({
-        id: block.id || uuidv4(),
-        type: block.type,
-        content: block.content || null,
-        audioFile: null, // Will be loaded manually by user
-        audioFilePath: block.audioFilePath || null,
-        duration: block.duration,
-      }));
+      const basePath = data.audioBasePath || '';
+
+      // Load blocks structure (audio files will need to be manually reloaded in browser)
+      const loadedBlocks = data.blocks.map((block: any) => {
+        // Novo formato: audioFileName. Legado: extrair basename de audioFilePath.
+        const audioFileName =
+          block.audioFileName ||
+          (block.audioFilePath ? getBasename(block.audioFilePath) : null);
+        const audioFilePath = audioFileName ? joinPath(basePath, audioFileName) : null;
+
+        return {
+          id: block.id || uuidv4(),
+          type: block.type,
+          content: block.content || null,
+          audioFile: null, // Will be loaded manually by user
+          audioFilePath,
+          audioFileName,
+          duration: block.duration,
+        };
+      });
 
       const audioBlocks = loadedBlocks.filter((b: any) => b.type === 'audio');
       if (audioBlocks.length > 0) {
-        const basePath = data.audioBasePath || '';
         const pathsList = audioBlocks.map((b: any, i: number) => {
-          let filePath = b.audioFilePath || 'Sem informação';
-          filePath = filePath.replace(/^C:\\fakepath\\/i, '');
-          const fullPath = basePath
-            ? `${basePath}${basePath.endsWith('\\') ? '' : '\\'}${filePath}`
-            : filePath;
+          const fullPath = b.audioFilePath || b.audioFileName || 'Sem informação';
           return `${i + 1}. ${fullPath}`;
         }).join('\n');
 

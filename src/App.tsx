@@ -9,8 +9,11 @@ import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { usePlaybackControls } from './hooks/usePlaybackControls';
 import { useScriptManager } from './hooks/useScriptManager';
 import { useAudioTime } from './hooks/useAudioTime';
+import { useAmbientSounds } from './hooks/useAmbientSounds';
 import { useTheme } from './hooks/useTheme';
 import { LoadedScript, Block } from './types';
+import { isTauri, isElectron } from './utils/platform';
+import { joinPath } from './utils/pathUtils';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -64,6 +67,15 @@ export default function App() {
   });
 
   const { saveScript: saveScriptFn, loadScriptTauri, loadScriptBrowser } = useScriptManager();
+
+  const {
+    layers: ambientLayers,
+    loadFile: ambientLoadFile,
+    clearFile: ambientClearFile,
+    togglePlay: ambientTogglePlay,
+    setVolume: ambientSetVolume,
+    setPlaybackRate: ambientSetPlaybackRate,
+  } = useAmbientSounds();
 
   // Sync audio refs from playback controls to audio player
   React.useEffect(() => {
@@ -149,6 +161,53 @@ export default function App() {
     };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  // Recarregar todos os áudios usando audioBasePath + audioFileName de cada bloco.
+  // Útil quando o usuário move a pasta e atualiza o basePath.
+  const reloadAllAudios = async () => {
+    if (!audioBasePath) {
+      alert('Informe primeiro a Pasta Base dos Arquivos de Audio.');
+      return;
+    }
+    if (!isTauri() && !isElectron()) {
+      alert('Recarga automática disponível apenas no aplicativo desktop. Use o botão "Recarregar" em cada bloco.');
+      return;
+    }
+
+    const loader = isElectron()
+      ? (await import('./utils/electronAudioLoader')).loadAudioFile
+      : (await import('./utils/tauriAudioLoader')).loadAudioFile;
+
+    const audioBlocks = blocks.filter(b => b.type === 'audio' && b.audioFileName);
+    let loaded = 0;
+    let failed = 0;
+
+    for (const block of audioBlocks) {
+      const fullPath = joinPath(audioBasePath, block.audioFileName as string);
+      try {
+        const file = await loader(fullPath);
+        if (file) {
+          updateBlock(block.id, {
+            audioFile: file,
+            audioFilePath: fullPath,
+          });
+          loaded++;
+        } else {
+          failed++;
+          console.warn(`❌ Não encontrado: ${fullPath}`);
+        }
+      } catch (error) {
+        failed++;
+        console.error(`❌ Erro carregando ${fullPath}:`, error);
+      }
+    }
+
+    if (failed === 0) {
+      alert(`✅ ${loaded} áudio(s) recarregado(s) com sucesso.`);
+    } else {
+      alert(`⚠️ ${loaded} carregado(s), ${failed} falhou(aram). Verifique o console para detalhes.`);
+    }
   };
 
   // Script list management
@@ -277,6 +336,7 @@ export default function App() {
             onMoveScriptUp={moveScriptUp}
             onMoveScriptDown={moveScriptDown}
             onClearAllScripts={clearAllScripts}
+            onReloadAllAudios={reloadAllAudios}
           />
         ) : (
           <ViewTab
@@ -313,6 +373,12 @@ export default function App() {
         onIncreaseFontSize={increaseFontSize}
         onDecreaseFontSize={decreaseFontSize}
         onResetFontSize={resetFontSize}
+        ambientLayers={ambientLayers}
+        onAmbientLoadFile={ambientLoadFile}
+        onAmbientClearFile={ambientClearFile}
+        onAmbientTogglePlay={ambientTogglePlay}
+        onAmbientSetVolume={ambientSetVolume}
+        onAmbientSetPlaybackRate={ambientSetPlaybackRate}
       />
 
       {/* Hidden audio elements */}

@@ -115,12 +115,8 @@ export function useAudioAnalyzer() {
         };
       } catch (error) {
         console.error('Erro ao detectar silêncio:', error);
-        // Em caso de erro, retornar áudio completo
-        return {
-          startTime: 0,
-          endTime: 0,
-          duration: 0,
-        };
+        // Relançar: chamador decide como proceder (normalmente, não cachear e tocar sem trim).
+        throw error;
       }
     },
     []

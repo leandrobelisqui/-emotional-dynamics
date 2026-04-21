@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
+import AmbientSoundsPanel from './AmbientSoundsPanel';
+import { AmbientId, AmbientLayerState } from '../hooks/useAmbientSounds';
 
 interface BottomPlayerBarProps {
   isPlaying: boolean;
@@ -21,6 +23,13 @@ interface BottomPlayerBarProps {
   onIncreaseFontSize: () => void;
   onDecreaseFontSize: () => void;
   onResetFontSize: () => void;
+  // Ambient sounds
+  ambientLayers: Record<AmbientId, AmbientLayerState>;
+  onAmbientLoadFile: (id: AmbientId, file: File) => void;
+  onAmbientClearFile: (id: AmbientId) => void;
+  onAmbientTogglePlay: (id: AmbientId) => void;
+  onAmbientSetVolume: (id: AmbientId, volume: number) => void;
+  onAmbientSetPlaybackRate: (id: AmbientId, rate: number) => void;
 }
 
 const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
@@ -44,10 +53,20 @@ const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
   onIncreaseFontSize,
   onDecreaseFontSize,
   onResetFontSize,
+  ambientLayers,
+  onAmbientLoadFile,
+  onAmbientClearFile,
+  onAmbientTogglePlay,
+  onAmbientSetVolume,
+  onAmbientSetPlaybackRate,
 }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [prevVolume, setPrevVolume] = useState(volume);
+  const [ambientOpen, setAmbientOpen] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const ambientActiveCount = Object.values(ambientLayers).filter(l => l.isPlaying).length;
+  const ambientLoadedCount = Object.values(ambientLayers).filter(l => !!l.fileName).length;
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -100,6 +119,18 @@ const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
 
       {/* Main bar */}
       <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/80 dark:border-gray-700/80 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+
+        {/* Ambient Sounds collapsible panel */}
+        {ambientOpen && (
+          <AmbientSoundsPanel
+            layers={ambientLayers}
+            onLoadFile={onAmbientLoadFile}
+            onClearFile={onAmbientClearFile}
+            onTogglePlay={onAmbientTogglePlay}
+            onSetVolume={onAmbientSetVolume}
+            onSetPlaybackRate={onAmbientSetPlaybackRate}
+          />
+        )}
 
         {/* Row 1: Now Playing + Transport + Seek */}
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
@@ -270,6 +301,34 @@ const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
                 trimSilence ? 'translate-x-[10px]' : 'translate-x-[2px]'
               }`} />
             </div>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 flex-shrink-0"></div>
+
+          {/* Ambient Sounds Toggle */}
+          <button
+            onClick={() => setAmbientOpen(prev => !prev)}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium transition-all flex-shrink-0 ${
+              ambientOpen
+                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+            }`}
+            title={ambientOpen ? 'Ocultar sons ambientes' : 'Mostrar sons ambientes'}
+          >
+            <i className="fas fa-wave-square"></i>
+            <span className="hidden sm:inline">Ambiente</span>
+            {ambientActiveCount > 0 ? (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold animate-pulse">
+                {ambientActiveCount}
+              </span>
+            ) : ambientLoadedCount > 0 ? (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 text-white text-[9px] font-bold">
+                {ambientLoadedCount}
+              </span>
+            ) : (
+              <i className={`fas fa-chevron-${ambientOpen ? 'down' : 'up'} text-[8px] opacity-60`}></i>
+            )}
           </button>
 
           {/* Divider */}

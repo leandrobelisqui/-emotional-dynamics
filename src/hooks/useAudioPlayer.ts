@@ -73,13 +73,23 @@ export function useAudioPlayer({ blocks, volume, crossfadeDuration, isPlaying, t
             try {
               console.log('🔍 Analisando silêncio para:', currentBlock.audioFile.name);
               const trimData = await detectSilence(currentBlock.audioFile);
-              trimTimesRef.current.set(currentBlock.id, {
-                startTime: trimData.startTime,
-                endTime: trimData.endTime,
-              });
-              console.log('✅ Trim salvo no cache:', currentBlock.id, trimData);
+              // Validar antes de cachear: endTime deve ser finito, positivo e maior que startTime.
+              const valid =
+                Number.isFinite(trimData.startTime) &&
+                Number.isFinite(trimData.endTime) &&
+                trimData.endTime > 0 &&
+                trimData.endTime > trimData.startTime;
+              if (valid) {
+                trimTimesRef.current.set(currentBlock.id, {
+                  startTime: trimData.startTime,
+                  endTime: trimData.endTime,
+                });
+                console.log('✅ Trim salvo no cache:', currentBlock.id, trimData);
+              } else {
+                console.warn('⚠️ Trim inválido descartado, tocará sem trim:', currentBlock.id, trimData);
+              }
             } catch (error) {
-              console.error('❌ Erro ao detectar silêncio:', error);
+              console.error('❌ Erro ao detectar silêncio, tocará sem trim:', error);
             }
           } else if (trimSilence && trimTimesRef.current.has(currentBlock.id)) {
             console.log('💾 Usando trim do cache:', currentBlock.id, trimTimesRef.current.get(currentBlock.id));

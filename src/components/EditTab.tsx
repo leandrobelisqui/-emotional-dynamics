@@ -22,6 +22,7 @@ interface EditTabProps {
   onMoveScriptUp: (scriptId: string) => void;
   onMoveScriptDown: (scriptId: string) => void;
   onClearAllScripts: () => void;
+  onReloadAllAudios: () => void;
 }
 
 const EditTab: React.FC<EditTabProps> = ({
@@ -42,6 +43,7 @@ const EditTab: React.FC<EditTabProps> = ({
   onMoveScriptUp,
   onMoveScriptDown,
   onClearAllScripts,
+  onReloadAllAudios,
 }) => {
   const isNativePlatform = isTauri() || isElectron();
 
@@ -93,13 +95,34 @@ const EditTab: React.FC<EditTabProps> = ({
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
               Pasta Base dos Arquivos de Audio
             </label>
-            <input
-              type="text"
-              value={audioBasePath}
-              onChange={(e) => onAudioBasePathChange(e.target.value)}
-              placeholder="Ex: C:\Users\Leandro\Music\Dinamicas"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition-colors"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={audioBasePath}
+                onChange={(e) => onAudioBasePathChange(e.target.value)}
+                placeholder="Ex: C:\Users\Leandro\Music\Dinamicas"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm transition-colors"
+              />
+              {isNativePlatform && (
+                <button
+                  onClick={onReloadAllAudios}
+                  disabled={!audioBasePath}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors shadow-sm flex items-center gap-1.5 whitespace-nowrap ${
+                    audioBasePath
+                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                  }`}
+                  title="Recarregar todos os audios usando esta pasta base"
+                >
+                  <i className="fas fa-sync-alt"></i>
+                  Recarregar tudo
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+              <i className="fas fa-info-circle mr-1"></i>
+              O script salva apenas os nomes dos arquivos. Se você mover a pasta para outro local, atualize este caminho e clique em "Recarregar tudo".
+            </p>
           </div>
         </div>
       </div>
