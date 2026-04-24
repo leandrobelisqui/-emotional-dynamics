@@ -10,7 +10,9 @@ import { usePlaybackControls } from './hooks/usePlaybackControls';
 import { useScriptManager } from './hooks/useScriptManager';
 import { useAudioTime } from './hooks/useAudioTime';
 import { useAmbientSounds } from './hooks/useAmbientSounds';
+import { useRemoteSync } from './hooks/useRemoteSync';
 import { useTheme } from './hooks/useTheme';
+import RemoteControlModal from './components/RemoteControlModal';
 import { LoadedScript, Block } from './types';
 import { isTauri, isElectron } from './utils/platform';
 import { joinPath } from './utils/pathUtils';
@@ -25,14 +27,14 @@ export default function App() {
   const [trimSilence, setTrimSilence] = useState<boolean>(false);
   const [loop, setLoop] = useState<boolean>(true);
   const [loadedScripts, setLoadedScripts] = useState<LoadedScript[]>([]);
+  const [remoteModalOpen, setRemoteModalOpen] = useState<boolean>(false);
 
   const { blocks, setBlocks, addBlock, updateBlock, removeBlock, moveBlockUp, moveBlockDown } = useBlockManager();
 
   const {
     currentBlockIndex,
     isPlaying,
-    audioRef: playbackAudioRef,
-    nextAudioRef: playbackNextAudioRef,
+    setIsPlaying,
     playPause: playPauseControl,
     stop,
     playBlockAudio: playBlockAudioControl,
@@ -77,13 +79,30 @@ export default function App() {
     setPlaybackRate: ambientSetPlaybackRate,
   } = useAmbientSounds();
 
-  // Sync audio refs from playback controls to audio player
-  React.useEffect(() => {
-    if (playbackAudioRef.current) audioRef.current = playbackAudioRef.current;
-    if (playbackNextAudioRef.current) nextAudioRef.current = playbackNextAudioRef.current;
-  }, [playbackAudioRef, playbackNextAudioRef, audioRef, nextAudioRef]);
+  const playPause = () => {
+    // Nada iniciado ainda → delega pro controle (que cuida de selecionar o 1º áudio e ligar o state)
+    if (currentAudioIndex === -1) {
+      playPauseControl(currentAudioIndex, setCurrentAudioIndex);
+      return;
+    }
 
-  const playPause = () => playPauseControl(currentAudioIndex, setCurrentAudioIndex);
+    // Áudio em execução: pausar/retomar o elemento atualmente ativo (respeitando crossfade)
+    const activeAudio = isAudio1Active ? audioRef.current : nextAudioRef.current;
+    const otherAudio = isAudio1Active ? nextAudioRef.current : audioRef.current;
+
+    if (isPlaying) {
+      activeAudio?.pause();
+      // Se estiver em meio a crossfade, o outro também pode estar tocando
+      if (otherAudio && !otherAudio.paused) otherAudio.pause();
+      setIsPlaying(false);
+    } else {
+      if (activeAudio) {
+        activeAudio.play().catch(e => console.error('Error resuming audio:', e));
+      }
+      setIsPlaying(true);
+    }
+  };
+
   const playBlockAudio = (blockIndex: number) => playBlockAudioControl(blockIndex, setCurrentAudioIndex);
 
   const handleStop = () => {
@@ -262,13 +281,48 @@ export default function App() {
     });
   };
 
-  // Now playing info for bottom bar
+  // Now playing info for bottom bar (must be declared before useRemoteSync uses them)
   const nowPlayingLabel = currentBlock?.type === 'audio'
     ? (currentBlock.audioFile?.name || 'Audio')
     : currentBlock?.type === 'text'
       ? (currentBlock.content?.slice(0, 40) || 'Texto')
       : '';
   const nowPlayingType = currentBlock?.type || null;
+
+  // Remote control (celular) — espelha state e dispacha comandos nos handlers já existentes
+  const remoteInfo = useRemoteSync({
+    blocks,
+    loadedScripts,
+    currentBlockIndex,
+    currentAudioIndex,
+    currentTime,
+    duration,
+    isPlaying,
+    volume,
+    loop,
+    crossfadeDuration,
+    trimSilence,
+    fontSize,
+    nowPlayingLabel,
+    nowPlayingType,
+    ambientLayers,
+    onPlayPause: playPause,
+    onStop: handleStop,
+    onPlayBlockAudio: playBlockAudio,
+    onSeek: seek,
+    onSetVolume: setVolume,
+    onSetLoop: setLoop,
+    onSetCrossfade: setCrossfadeDuration,
+    onSetTrimSilence: setTrimSilence,
+    onIncreaseFontSize: increaseFontSize,
+    onDecreaseFontSize: decreaseFontSize,
+    onResetFontSize: resetFontSize,
+    onAmbientTogglePlay: ambientTogglePlay,
+    onAmbientSetVolume: ambientSetVolume,
+    onAmbientSetPlaybackRate: ambientSetPlaybackRate,
+  });
+
+  const remoteAvailable = !!(window as any).electron?.remote;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 transition-colors">
@@ -379,6 +433,15 @@ export default function App() {
         onAmbientTogglePlay={ambientTogglePlay}
         onAmbientSetVolume={ambientSetVolume}
         onAmbientSetPlaybackRate={ambientSetPlaybackRate}
+        remoteClientCount={remoteInfo.clientCount}
+        onOpenRemote={remoteAvailable ? () => setRemoteModalOpen(true) : undefined}
+      />
+
+      {/* Remote Control Modal */}
+      <RemoteControlModal
+        open={remoteModalOpen}
+        info={remoteInfo}
+        onClose={() => setRemoteModalOpen(false)}
       />
 
       {/* Hidden audio elements */}

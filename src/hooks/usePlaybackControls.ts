@@ -67,6 +67,7 @@ export function usePlaybackControls(blocks: Block[]) {
   return {
     currentBlockIndex,
     isPlaying,
+    setIsPlaying,
     audioRef,
     nextAudioRef,
     playPause,

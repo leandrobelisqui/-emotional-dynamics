@@ -13,6 +13,8 @@ interface AmbientSoundsPanelProps {
   onTogglePlay: (id: AmbientId) => void;
   onSetVolume: (id: AmbientId, volume: number) => void;
   onSetPlaybackRate: (id: AmbientId, rate: number) => void;
+  /** Quando true, esconde controles de upload/remover (modo remoto/mobile). */
+  readOnlyFiles?: boolean;
 }
 
 const accentClasses: Record<string, {
@@ -57,6 +59,7 @@ const AmbientSoundsPanel: React.FC<AmbientSoundsPanelProps> = ({
   onTogglePlay,
   onSetVolume,
   onSetPlaybackRate,
+  readOnlyFiles = false,
 }) => {
   const fileInputRefs = useRef<Record<AmbientId, HTMLInputElement | null>>({
     breathing: null,
@@ -167,32 +170,34 @@ const AmbientSoundsPanel: React.FC<AmbientSoundsPanelProps> = ({
                 })}
               </div>
 
-              {/* File controls */}
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                <input
-                  ref={(el) => { fileInputRefs.current[id] = el; }}
-                  type="file"
-                  accept="audio/*"
-                  className="hidden"
-                  onChange={(e) => handleFileChange(id, e)}
-                />
-                <button
-                  onClick={() => fileInputRefs.current[id]?.click()}
-                  className="w-6 h-6 rounded flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-                  title={hasFile ? 'Trocar arquivo' : 'Carregar arquivo'}
-                >
-                  <i className={`fas ${hasFile ? 'fa-sync-alt' : 'fa-upload'} text-[10px]`}></i>
-                </button>
-                {hasFile && (
+              {/* File controls (hidden in remote/mobile mode) */}
+              {!readOnlyFiles && (
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <input
+                    ref={(el) => { fileInputRefs.current[id] = el; }}
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange(id, e)}
+                  />
                   <button
-                    onClick={() => onClearFile(id)}
-                    className="w-6 h-6 rounded flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                    title="Remover arquivo"
+                    onClick={() => fileInputRefs.current[id]?.click()}
+                    className="w-6 h-6 rounded flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                    title={hasFile ? 'Trocar arquivo' : 'Carregar arquivo'}
                   >
-                    <i className="fas fa-times text-[10px]"></i>
+                    <i className={`fas ${hasFile ? 'fa-sync-alt' : 'fa-upload'} text-[10px]`}></i>
                   </button>
-                )}
-              </div>
+                  {hasFile && (
+                    <button
+                      onClick={() => onClearFile(id)}
+                      className="w-6 h-6 rounded flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                      title="Remover arquivo"
+                    >
+                      <i className="fas fa-times text-[10px]"></i>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

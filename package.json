@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:mobile": "vite build --config vite.mobile.config.ts",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron electron-simple.js\"",
+    "electron:dev": "concurrently \"npm run dev\" \"npm run build:mobile\" \"wait-on http://localhost:5173 && electron electron-simple.js\"",
     "electron:start": "electron electron-simple.js",
-    "electron:build": "npm run build && electron-builder",
+    "electron:build": "npm run build && npm run build:mobile && electron-builder",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -17,12 +18,14 @@
   "dependencies": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.9.0",
@@ -51,6 +54,7 @@
     },
     "files": [
       "dist/**/*",
+      "dist-mobile/**/*",
       "electron/**/*"
     ],
     "win": {

@@ -1,8 +1,17 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const { startRemoteServer } = require('./electron/remoteServer');
+
+// Desligar throttling do Chromium — janela continua executando JS/timers/rAF
+// em taxa normal mesmo em segundo plano. Precisa ser antes de app.whenReady().
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 
 let mainWindow;
+let remoteServer = null;
+const REMOTE_PORT = 9000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -12,6 +21,7 @@ function createWindow() {
       preload: path.join(__dirname, 'electron', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 
@@ -24,9 +34,29 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  createWindow();
+  const staticDir = path.join(__dirname, 'dist-mobile');
+  try {
+    remoteServer = await startRemoteServer({
+      port: REMOTE_PORT,
+      staticDir,
+      onCommand: (cmd) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('remote:command', cmd);
+        }
+      },
+    });
+  } catch (err) {
+    console.error('[remote] failed to start server:', err);
+  }
+});
 
 app.on('window-all-closed', () => {
+  if (remoteServer) {
+    try { remoteServer.stop(); } catch {}
+    remoteServer = null;
+  }
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -108,4 +138,19 @@ ipcMain.handle('fs:exists', async (event, filePath) => {
   } catch {
     return false;
   }
+});
+
+// Remote control IPC handlers
+ipcMain.handle('remote:get-info', async () => {
+  if (!remoteServer) return { url: null, port: REMOTE_PORT, clientCount: 0 };
+  return {
+    url: remoteServer.url,
+    port: remoteServer.port,
+    clientCount: remoteServer.getClientCount(),
+  };
+});
+
+ipcMain.handle('remote:broadcast-state', async (event, state) => {
+  if (remoteServer) remoteServer.broadcast(state);
+  return true;
 });

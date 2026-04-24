@@ -18,6 +18,11 @@ export interface Block {
   duration?: number;
   scriptId?: string;
   scriptName?: string;
+  /**
+   * Flag usada em modo remoto (mobile): indica que o desktop tem o áudio carregado
+   * mesmo sem o blob `audioFile`. No desktop, derivado de `!!audioFile`.
+   */
+  hasAudioLoaded?: boolean;
 }
 
 export interface LoadedScript {

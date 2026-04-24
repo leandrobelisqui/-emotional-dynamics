@@ -1,6 +1,6 @@
 import { Block } from '../types';
 import { isTauri, isElectron } from '../utils/platform';
-import { getBasename, joinPath, deriveCommonBasePath } from '../utils/pathUtils';
+import { getRelativePath, joinPath, deriveCommonBasePath } from '../utils/pathUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ScriptData {
@@ -32,19 +32,23 @@ export function useScriptManager() {
       // Pasta base dos áudios — altere isso se mover os arquivos para outro lugar.
       audioBasePath: effectiveBasePath,
       blocks: blocks.map(block => {
-        // Nome do arquivo: preferir File.name, senão basename do path, senão audioFileName existente.
-        const fileName =
-          block.audioFile?.name ||
-          (block.audioFilePath ? getBasename(block.audioFilePath) : null) ||
-          block.audioFileName ||
-          null;
+        // Nome relativo ao basePath: preserva subpastas se houver
+        // (ex.: "Ansiedade\intro.mp3" quando base = "C:\Dinamicas").
+        let fileName: string | null = null;
+        if (block.audioFilePath) {
+          fileName = getRelativePath(effectiveBasePath, block.audioFilePath);
+        } else if (block.audioFileName) {
+          // Caso raro: bloco não tem path resolvido (não recarregado) — preservar o que tem
+          fileName = block.audioFileName;
+        } else if (block.audioFile?.name) {
+          fileName = block.audioFile.name;
+        }
 
         return {
           id: block.id,
           type: block.type,
           content: block.content,
-          // Salvamos APENAS o nome do arquivo. O caminho completo é reconstruído
-          // no load via `audioBasePath + audioFileName`.
+          // Relativo ao audioBasePath. Reconstruído no load via joinPath.
           audioFileName: fileName,
           duration: block.duration,
         };
@@ -131,7 +135,7 @@ export function useScriptManager() {
                   ...block,
                   audioFile,
                   audioFilePath: resolvedPath,
-                  audioFileName: block.audioFileName || (block.audioFilePath ? getBasename(block.audioFilePath) : null),
+                  audioFileName: block.audioFileName || (block.audioFilePath ? getRelativePath(basePath, block.audioFilePath) : null),
                   id: block.id || uuidv4(),
                 };
               }
@@ -187,7 +191,7 @@ export function useScriptManager() {
                 ...block,
                 audioFile,
                 audioFilePath: resolvedPath,
-                audioFileName: block.audioFileName || (block.audioFilePath ? getBasename(block.audioFilePath) : null),
+                audioFileName: block.audioFileName || (block.audioFilePath ? getRelativePath(basePath, block.audioFilePath) : null),
                 id: block.id || uuidv4(),
               };
             }
@@ -231,10 +235,10 @@ export function useScriptManager() {
 
       // Load blocks structure (audio files will need to be manually reloaded in browser)
       const loadedBlocks = data.blocks.map((block: any) => {
-        // Novo formato: audioFileName. Legado: extrair basename de audioFilePath.
+        // Novo formato: audioFileName. Legado: converter path absoluto pra relativo.
         const audioFileName =
           block.audioFileName ||
-          (block.audioFilePath ? getBasename(block.audioFilePath) : null);
+          (block.audioFilePath ? getRelativePath(basePath, block.audioFilePath) : null);
         const audioFilePath = audioFileName ? joinPath(basePath, audioFileName) : null;
 
         return {

@@ -21,4 +21,15 @@ contextBridge.exposeInMainWorld('electron', {
   path: {
     basename: (filePath) => ipcRenderer.invoke('path:basename', filePath),
   },
+
+  // Remote control APIs
+  remote: {
+    getInfo: () => ipcRenderer.invoke('remote:get-info'),
+    broadcastState: (state) => ipcRenderer.invoke('remote:broadcast-state', state),
+    onCommand: (callback) => {
+      const listener = (_event, cmd) => callback(cmd);
+      ipcRenderer.on('remote:command', listener);
+      return () => ipcRenderer.removeListener('remote:command', listener);
+    },
+  },
 });

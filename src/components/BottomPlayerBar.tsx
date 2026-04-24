@@ -30,6 +30,11 @@ interface BottomPlayerBarProps {
   onAmbientTogglePlay: (id: AmbientId) => void;
   onAmbientSetVolume: (id: AmbientId, volume: number) => void;
   onAmbientSetPlaybackRate: (id: AmbientId, rate: number) => void;
+  // Remote control (optional - only in desktop app)
+  remoteClientCount?: number;
+  onOpenRemote?: () => void;
+  /** Modo mobile/remoto — desabilita controles de upload de ambient files */
+  readOnlyAmbientFiles?: boolean;
 }
 
 const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
@@ -59,6 +64,9 @@ const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
   onAmbientTogglePlay,
   onAmbientSetVolume,
   onAmbientSetPlaybackRate,
+  remoteClientCount = 0,
+  onOpenRemote,
+  readOnlyAmbientFiles = false,
 }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [prevVolume, setPrevVolume] = useState(volume);
@@ -129,6 +137,7 @@ const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
             onTogglePlay={onAmbientTogglePlay}
             onSetVolume={onAmbientSetVolume}
             onSetPlaybackRate={onAmbientSetPlaybackRate}
+            readOnlyFiles={readOnlyAmbientFiles}
           />
         )}
 
@@ -330,6 +339,30 @@ const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
               <i className={`fas fa-chevron-${ambientOpen ? 'down' : 'up'} text-[8px] opacity-60`}></i>
             )}
           </button>
+
+          {/* Remote Control (only if handler provided - i.e. desktop app) */}
+          {onOpenRemote && (
+            <>
+              <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 flex-shrink-0"></div>
+              <button
+                onClick={onOpenRemote}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium transition-all flex-shrink-0 ${
+                  remoteClientCount > 0
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+                }`}
+                title="Controle pelo celular"
+              >
+                <i className="fas fa-qrcode"></i>
+                <span className="hidden sm:inline">Remoto</span>
+                {remoteClientCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold animate-pulse">
+                    {remoteClientCount}
+                  </span>
+                )}
+              </button>
+            </>
+          )}
 
           {/* Divider */}
           <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 flex-shrink-0"></div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Block, LoadedScript } from '../types';
 import MarkdownText from './MarkdownText';
+import { getBasename } from '../utils/pathUtils';
 
 interface ViewTabProps {
   blocks: Block[];
@@ -124,7 +125,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                            {block.audioFile?.name || <span className="text-gray-400 italic">Nenhum audio</span>}
+                            {block.audioFile?.name || (block.audioFileName && getBasename(block.audioFileName)) || <span className="text-gray-400 italic">Nenhum audio</span>}
                           </p>
                           {block.duration ? (
                             <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -133,7 +134,7 @@ const ViewTab: React.FC<ViewTabProps> = ({
                           ) : null}
                         </div>
                       </div>
-                      {block.audioFile && (
+                      {(block.audioFile || block.hasAudioLoaded) && (
                         <button
                           onClick={() => onPlayBlockAudio(index)}
                           className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex-shrink-0 ${

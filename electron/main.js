@@ -1,8 +1,19 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const { startRemoteServer } = require('./remoteServer');
+
+// Desligar throttling do Chromium para que a janela continue executando
+// JS, timers e requestAnimationFrame em taxa normal mesmo em segundo plano.
+// Essencial para o controle remoto (celular) funcionar com app minimizado/atrás.
+// IMPORTANTE: precisa ser chamado antes de app.whenReady().
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 
 let mainWindow;
+let remoteServer = null;
+const REMOTE_PORT = 9000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -12,6 +23,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Mantém timers/rAF/áudio rodando mesmo com janela em segundo plano
+      backgroundThrottling: false,
     },
   });
 
@@ -29,9 +42,33 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  createWindow();
+
+  // Iniciar servidor de controle remoto (HTTP + WS)
+  // Em dev, o build mobile fica em dist-mobile/. Em produção, o electron-builder
+  // inclui essa pasta via "build.files" no package.json.
+  const staticDir = path.join(__dirname, '..', 'dist-mobile');
+  try {
+    remoteServer = await startRemoteServer({
+      port: REMOTE_PORT,
+      staticDir,
+      onCommand: (cmd) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('remote:command', cmd);
+        }
+      },
+    });
+  } catch (err) {
+    console.error('[remote] failed to start server:', err);
+  }
+});
 
 app.on('window-all-closed', () => {
+  if (remoteServer) {
+    try { remoteServer.stop(); } catch {}
+    remoteServer = null;
+  }
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -139,4 +176,23 @@ ipcMain.handle('fs:exists', async (event, filePath) => {
   } catch {
     return false;
   }
+});
+
+// Remote control IPC handlers
+ipcMain.handle('remote:get-info', async () => {
+  if (!remoteServer) {
+    return { url: null, port: REMOTE_PORT, clientCount: 0 };
+  }
+  return {
+    url: remoteServer.url,
+    port: remoteServer.port,
+    clientCount: remoteServer.getClientCount(),
+  };
+});
+
+ipcMain.handle('remote:broadcast-state', async (event, state) => {
+  if (remoteServer) {
+    remoteServer.broadcast(state);
+  }
+  return true;
 });

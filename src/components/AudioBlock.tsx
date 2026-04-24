@@ -1,7 +1,7 @@
 import React, { useRef, ChangeEvent } from 'react';
 import { Block } from '../types';
 import { isTauri, isElectron } from '../utils/platform';
-import { getBasename, joinPath } from '../utils/pathUtils';
+import { getBasename, getRelativePath, joinPath } from '../utils/pathUtils';
 
 interface AudioBlockProps {
   block: Block;
@@ -35,7 +35,9 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
         onUpdate({
           audioFile: file,
           audioFilePath: filePath, // Caminho completo resolvido em runtime
-          audioFileName: getBasename(filePath),
+          // Se arquivo está dentro do basePath (possivelmente em subpasta),
+          // preserva a parte relativa. Senão, só o nome.
+          audioFileName: getRelativePath(audioBasePath || '', filePath),
           duration
         });
       } catch (error) {
@@ -65,7 +67,7 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
         onUpdate({
           audioFile: file,
           audioFilePath: filePath,
-          audioFileName: getBasename(filePath),
+          audioFileName: getRelativePath(audioBasePath || '', filePath),
           duration
         });
       } catch (error) {
@@ -120,7 +122,7 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
         onUpdate({
           audioFile: file,
           audioFilePath: fullPath,
-          audioFileName: getBasename(fullPath),
+          audioFileName: getRelativePath(audioBasePath, fullPath),
           duration,
         });
         return true;
@@ -139,7 +141,7 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
         onUpdate({
           audioFile: file,
           audioFilePath: fullPath,
-          audioFileName: getBasename(fullPath),
+          audioFileName: getRelativePath(audioBasePath, fullPath),
           duration,
         });
         return true;
@@ -193,7 +195,7 @@ export const AudioBlock: React.FC<AudioBlockProps> = ({ block, audioBasePath, on
                 </>
               ) : (
                 <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 break-all">
-                  Arquivo: {block.audioFileName || block.audioFilePath}
+                  Arquivo: {getBasename(block.audioFileName || block.audioFilePath || '')}
                 </p>
               )}
             </div>
